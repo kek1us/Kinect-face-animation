@@ -56,7 +56,7 @@ int main() {
 
 	if (!init()) return 1;
 
-	K.init();
+	//K.init();
 	M.init();
 
 	std::cout << "LOADING OK" << std::endl;
@@ -76,7 +76,8 @@ int main() {
 		elapsed = clock.getElapsedTime();
 		if (elapsed.asSeconds() > 1.0 / 60) { // 60 fps = 1.0/60
 			window.setActive();
-			K.render();
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			//K.render();
 			M.render();
 			window.display();
 		}

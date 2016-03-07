@@ -185,16 +185,16 @@ void Model::update() {
 }
 
 void Model::render() {
-	glm::mat4 Projection = glm::perspective(glm::radians(45.0f), (float)WNDW_WIDTH / (float)WNDW_HEIGHT, 0.1f, 1.0f);
+	glm::mat4 Projection = glm::perspective(glm::radians(20.0f), (float)WNDW_WIDTH / (float)WNDW_HEIGHT, 0.1f, 1.0f);
 
 	// Camera matrix
 	glm::mat4 View = glm::lookAt(
-		glm::vec3(7, 7, 7), // Camera is at (4,3,3), in World Space
+		glm::vec3(-3.5, 0, 15), // Camera is at (4,3,3), in World Space
 		glm::vec3(0, 0, 0), // and looks at the origin
 		glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
 		);
 
-	glm::mat4 Model = glm::translate(glm::vec3(1,2,6.5f)) * glm::scale(glm::vec3(1,1,1)) * glm::rotate(PI/2, glm::vec3(0,1,0));
+	glm::mat4 Model = glm::translate(glm::vec3(-3.5,-2.25,0)) * glm::scale(glm::vec3(0.25,0.25,0.25)) * glm::rotate(0.0f, glm::vec3(0,1,0));
 
 	glm::mat4 mvp = Projection * View * Model;
 

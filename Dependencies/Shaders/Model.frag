@@ -25,7 +25,8 @@ void main(){
 	new_uv = vec2(UV.x, 1.0 - UV.y);	
 
 	// Material properties
-	vec4 text_color = texture( myTextureSampler, new_uv ).rgba;
+	//vec4 text_color = texture( myTextureSampler, new_uv ).rgba;
+	vec4 text_color = vec4(0.4,0.4,0.4,1);
 	vec3 MaterialDiffuseColor = text_color.rgb;
 	vec3 MaterialAmbientColor = vec3(0.5,0.5,0.5) * MaterialDiffuseColor;
 	vec3 MaterialSpecularColor = vec3(0.9,0.9,0.9);
