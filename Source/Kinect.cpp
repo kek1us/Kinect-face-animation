@@ -10,7 +10,9 @@ Kinect::~Kinect() {
 }
 
 bool Kinect::init() {
-	if (!initKinect()) exit(EXIT_FAILURE);
+	//if (!initKinect()) exit(EXIT_FAILURE);
+	if (!initKinect()) return false;
+	if (!initFaceTrack()) return false;
 	if (!initVBO()) exit(EXIT_FAILURE);
 
 	// Initialize textures
@@ -39,6 +41,49 @@ bool Kinect::initKinect() {
 		NULL,   // Event handle
 		&rgbStream);
 	return sensor;
+}
+
+bool Kinect::initFaceTrack() {
+	// Create an instance of a face tracker
+	pFT = FTCreateFaceTracker();
+	if (!pFT) return false;
+	// Video camera config with width, height, focal length in pixels
+	// NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS focal length is computed for 640x480 resolution
+	// If you use different resolutions, multiply this focal length by the scaling factor
+	FT_CAMERA_CONFIG videoCameraConfig = { 640, 480, NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS };
+
+	// Depth camera config with width, height, focal length in pixels
+	// NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS focal length is computed for 320x240 resolution
+	// If you use different resolutions, multiply this focal length by the scaling factor
+	FT_CAMERA_CONFIG depthCameraConfig = { 320, 240, NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS };
+
+	// Initialize the face tracker
+	HRESULT hr = pFT->Initialize(&videoCameraConfig, &depthCameraConfig, NULL, NULL);
+	if (FAILED(hr)) return false;
+
+	// Create a face tracking result interface
+	pFTResult = NULL;
+	hr = pFT->CreateFTResult(&pFTResult);
+	if (FAILED(hr)) return false;
+
+	// Prepare image interfaces that hold RGB and depth data
+	pColorFrame = FTCreateImage();
+	//pDepthFrame = FTCreateImage();
+	//if (!pColorFrame || !pDepthFrame) return false;
+	if (!pColorFrame) return false;
+
+	// Attach created interfaces to the RGB and depth buffers that are filled with
+	// corresponding RGB and depth frame data from Kinect cameras
+	pColorFrame->Attach(640, 480, data, FTIMAGEFORMAT_UINT8_R8G8B8, 640 * 3);
+	//pDepthFrame->Attach(320, 240, depthCameraFrameBuffer, FTIMAGEFORMAT_UINT16_D13P3, 320 * 2);
+	// You can also use Allocate() method in which case IFTImage interfaces own their memory.
+	// In this case use CopyTo() method to copy buffers
+
+	sensorData.pVideoFrame = pColorFrame;
+	sensorData.ZoomFactor = 1.0f;       // Not used must be 1.0
+	sensorData.ViewOffset = POINT{0, 0}; // Not used must be (0,0)
+
+	return true;
 }
 
 bool Kinect::initVBO() {
@@ -89,10 +134,13 @@ void Kinect::getKinectData(GLubyte* dest) {
 	sensor->NuiImageStreamReleaseFrame(rgbStream, &imageFrame);
 }
 
+void Kinect::update() {
+	getKinectData(data);
+}
+
 void Kinect::render() {
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	getKinectData(data);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, KINECT_WIDTH, KINECT_HEIGHT, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)data);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor3f(1.0f, 1.0f, 1.0f);

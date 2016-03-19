@@ -9,6 +9,7 @@
 
 Kinect K;
 Model M;
+bool KinectOn;
 
 bool init() {
 	// Initialize GLEW
@@ -44,6 +45,8 @@ bool init() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	KinectOn = true;
+
 	return true;
 }
 
@@ -54,9 +57,9 @@ int main() {
 	Settings.antialiasingLevel = 2;  // Request 2 levels of antialiasing
 	sf::Window window(sf::VideoMode(WNDW_WIDTH, WNDW_HEIGHT, 32), APP_NAME, sf::Style::Close, Settings);
 
-	if (!init()) return 1;
+	if (!init()) exit(EXIT_FAILURE);
 
-	//K.init();
+	if (!K.init()) KinectOn = false;
 	M.init();
 
 	std::cout << "LOADING OK" << std::endl;
@@ -77,7 +80,7 @@ int main() {
 		if (elapsed.asSeconds() > 1.0 / 60) { // 60 fps = 1.0/60
 			window.setActive();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			//K.render();
+			if (KinectOn) K.render();
 			M.render();
 			window.display();
 		}

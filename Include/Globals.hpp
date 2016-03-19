@@ -24,6 +24,7 @@
 #include <NuiApi.h>
 #include <NuiImageCamera.h>
 #include <NuiSensor.h>
+#include <FaceTrackLib.h>
 
 // Global variables
 #define DEBUG_MODE		0	// 0 off | 1 on

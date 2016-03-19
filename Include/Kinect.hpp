@@ -11,8 +11,10 @@ public:
 
 	bool init();
 	bool initKinect();
+	bool initFaceTrack();
 	bool initVBO();
 	void getKinectData(GLubyte* dest);
+	void update();
 	void render();
 
 private:
@@ -26,6 +28,11 @@ private:
 	GLuint texture_handle;
 
 	// Kinect variables
-	HANDLE rgbStream;              // The identifier of the Kinect's RGB Camera
-	INuiSensor* sensor;            // The kinect sensor
+	HANDLE rgbStream;				// The identifier of the Kinect's RGB Camera
+	INuiSensor* sensor;				// The Kinect sensor
+	IFTFaceTracker* pFT;			// The Face Tracking COM interface
+	IFTResult* pFTResult;			// The Face Tracking reslt object
+	IFTImage* pColorFrame;			// Image interface that holds RGB data
+	IFTImage* pDepthFrame;			// Image interface that holds depth data
+	FT_SENSOR_DATA sensorData;		// Sensor data structure
 };
