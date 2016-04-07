@@ -7,22 +7,29 @@ Kinect::~Kinect() {
 	glDeleteBuffers(1, &uvbuffer);
 	glDeleteProgram(program_handle);
 	glDeleteTextures(1, &textureId);
+	pFTResult->Release();
+	pColorFrame->Release();
+	pFT->Release();
 }
 
 bool Kinect::init() {
 	//if (!initKinect()) exit(EXIT_FAILURE);
-	if (!initKinect()) return false;
-	if (!initFaceTrack()) return false;
+	kinect = true;
+	if (!initKinect()) kinect = false;
+	if (!initFaceTrack()) kinect = false;
 	if (!initVBO()) exit(EXIT_FAILURE);
 
 	// Initialize textures
-	glGenTextures(1, &textureId);
-	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WNDW_WIDTH, WNDW_HEIGHT, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)data);
+	if (!kinect) textureId = loadTex(KINECT_FAIL_SRC);
+	else {
+		glGenTextures(1, &textureId);
+		glBindTexture(GL_TEXTURE_2D, textureId);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WNDW_WIDTH, WNDW_HEIGHT, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)data);
+	}
 
-	return true;
+	return kinect;
 }
 
 bool Kinect::initKinect() {
@@ -37,7 +44,7 @@ bool Kinect::initKinect() {
 		NUI_IMAGE_TYPE_COLOR,            // Depth camera or rgb camera?
 		NUI_IMAGE_RESOLUTION_640x480,    // Image resolution
 		0,      // Image stream flags, e.g. near mode
-		1,      // Number of frames to buffer
+		2,      // Number of frames to buffer
 		NULL,   // Event handle
 		&rgbStream);
 	return sensor;
@@ -74,14 +81,16 @@ bool Kinect::initFaceTrack() {
 
 	// Attach created interfaces to the RGB and depth buffers that are filled with
 	// corresponding RGB and depth frame data from Kinect cameras
-	pColorFrame->Attach(640, 480, data, FTIMAGEFORMAT_UINT8_R8G8B8, 640 * 3);
+	pColorFrame->Attach(640, 480, data, FTIMAGEFORMAT_UINT8_B8G8R8A8, 640 * 3);
 	//pDepthFrame->Attach(320, 240, depthCameraFrameBuffer, FTIMAGEFORMAT_UINT16_D13P3, 320 * 2);
 	// You can also use Allocate() method in which case IFTImage interfaces own their memory.
 	// In this case use CopyTo() method to copy buffers
 
-	sensorData.pVideoFrame = pColorFrame;
+	//sensorData.pVideoFrame = pColorFrame;
 	sensorData.ZoomFactor = 1.0f;       // Not used must be 1.0
 	sensorData.ViewOffset = POINT{0, 0}; // Not used must be (0,0)
+
+	isTracked = false;
 
 	return true;
 }
@@ -93,6 +102,11 @@ bool Kinect::initVBO() {
 		2.0,-1.0,0,
 		2.0,1.0,0
 	};
+
+	if (!kinect) {
+		vertices[6] = 1.0;
+		vertices[9] = 1.0;
+	}
 
 	glGenBuffers(1, &vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
@@ -136,12 +150,46 @@ void Kinect::getKinectData(GLubyte* dest) {
 
 void Kinect::update() {
 	getKinectData(data);
+
+	// Check if we are already tracking a face
+	if (!isTracked)
+	{
+		// Initiate face tracking. This call is more expensive and
+		// searches the input image for a face.
+		HRESULT hr = pFT->StartTracking(&sensorData, NULL, NULL, pFTResult);
+		if (SUCCEEDED(hr))
+		{
+			std::cout << "DETECTS FACE" << std::endl;
+			isTracked = true;
+		}
+
+		else
+		{
+			// Handle errors
+			isTracked = false;
+		}
+	}
+	else
+	{
+		// Continue tracking. It uses a previously known face position,
+		// so it is an inexpensive call.
+		HRESULT hr = pFT->ContinueTracking(&sensorData, NULL, pFTResult);
+		if (FAILED(hr))
+		{
+			// Handle errors
+			isTracked = false;
+		}
+	}
+
+	// Do something with pFTResult.
+
+	// Terminate on some criteria.
 }
 
 void Kinect::render() {
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, KINECT_WIDTH, KINECT_HEIGHT, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)data);
+	if (kinect) glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, KINECT_WIDTH, KINECT_HEIGHT, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)data);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor3f(1.0f, 1.0f, 1.0f);
 

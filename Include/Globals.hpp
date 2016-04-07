@@ -35,3 +35,4 @@
 #define KINECT_HEIGHT	480
 #define MODEL_SRC		"Assets/BorisT.obj"
 #define TEXTURE_SRC		"Assets/model.jpg"
+#define KINECT_FAIL_SRC	"Assets/fail.jpg"

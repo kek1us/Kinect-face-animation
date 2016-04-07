@@ -102,7 +102,10 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY "$(ProjectDir)Dependencies\Shaders" "$(TargetDir)Dependencies\Shaders" /E /I /F /Y</Command>
+      <Command>XCOPY "$(ProjectDir)Dependencies\Shaders" "$(TargetDir)Dependencies\Shaders" /E /I /F /Y
+XCOPY "$(ProjectDir)Assets" "$(TargetDir)Assets" /E /I /F /Y
+if $(PlatformName) == x64 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\amd64" "$(TargetDir)" /E /I /F /Y
+if $(PlatformName) == x86 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\x86" "$(TargetDir)" /E /I /F /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -119,7 +122,10 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY "$(ProjectDir)Dependencies\Shaders" "$(TargetDir)Dependencies\Shaders" /E /I /F /Y</Command>
+      <Command>XCOPY "$(ProjectDir)Dependencies\Shaders" "$(TargetDir)Dependencies\Shaders" /E /I /F /Y
+XCOPY "$(ProjectDir)Assets" "$(TargetDir)Assets" /E /I /F /Y
+if $(PlatformName) == x64 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\amd64" "$(TargetDir)" /E /I /F /Y
+if $(PlatformName) == x86 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\x86" "$(TargetDir)" /E /I /F /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -141,7 +147,10 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY "$(ProjectDir)Dependencies\Shaders" "$(TargetDir)Dependencies\Shaders" /E /I /F /Y</Command>
+      <Command>XCOPY "$(ProjectDir)Dependencies\Shaders" "$(TargetDir)Dependencies\Shaders" /E /I /F /Y
+XCOPY "$(ProjectDir)Assets" "$(TargetDir)Assets" /E /I /F /Y
+if $(PlatformName) == x64 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\amd64" "$(TargetDir)" /E /I /F /Y
+if $(PlatformName) == x86 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\x86" "$(TargetDir)" /E /I /F /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -168,7 +177,9 @@
     </Link>
     <PostBuildEvent>
       <Command>XCOPY "$(ProjectDir)Dependencies\Shaders" "$(TargetDir)Dependencies\Shaders" /E /I /F /Y
-XCOPY "$(ProjectDir)Assets" "$(TargetDir)Assets" /E /I /F /Y</Command>
+XCOPY "$(ProjectDir)Assets" "$(TargetDir)Assets" /E /I /F /Y
+if $(PlatformName) == x64 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\amd64" "$(TargetDir)" /E /I /F /Y
+if $(PlatformName) == x86 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\x86" "$(TargetDir)" /E /I /F /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

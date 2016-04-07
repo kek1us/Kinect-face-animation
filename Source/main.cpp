@@ -3,9 +3,7 @@
 #include "Model.hpp"
 
 //Delete console if not in debug mode
-#if (!DEBUG_MODE)
-	#pragma comment(linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"")
-#endif
+
 
 Kinect K;
 Model M;
@@ -80,7 +78,8 @@ int main() {
 		if (elapsed.asSeconds() > 1.0 / 60) { // 60 fps = 1.0/60
 			window.setActive();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			if (KinectOn) K.render();
+			if (KinectOn) K.update();
+			K.render();
 			M.render();
 			window.display();
 		}

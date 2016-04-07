@@ -101,6 +101,8 @@ GLuint loadTex(std::string filename) {
 	if (!img_data.loadFromFile(filename)) {
 		std::cout << "Could not load " << filename << std::endl;
 	}
+	
+	std::cout << filename << std::endl;
 
 	GLuint texture_handle;
 	glGenTextures(1, &texture_handle);

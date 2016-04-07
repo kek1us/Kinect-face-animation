@@ -31,8 +31,10 @@ private:
 	HANDLE rgbStream;				// The identifier of the Kinect's RGB Camera
 	INuiSensor* sensor;				// The Kinect sensor
 	IFTFaceTracker* pFT;			// The Face Tracking COM interface
-	IFTResult* pFTResult;			// The Face Tracking reslt object
+	IFTResult* pFTResult;			// The Face Tracking result object
 	IFTImage* pColorFrame;			// Image interface that holds RGB data
 	IFTImage* pDepthFrame;			// Image interface that holds depth data
 	FT_SENSOR_DATA sensorData;		// Sensor data structure
+	bool kinect;
+	bool isTracked;
 };
