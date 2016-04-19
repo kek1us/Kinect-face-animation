@@ -9,6 +9,7 @@ Kinect::~Kinect() {
 	glDeleteTextures(1, &textureId);
 	pFTResult->Release();
 	pColorFrame->Release();
+	pDepthFrame->Release();
 	pFT->Release();
 }
 
@@ -47,6 +48,40 @@ bool Kinect::initKinect() {
 		2,      // Number of frames to buffer
 		NULL,   // Event handle
 		&rgbStream);
+
+	sensor->NuiImageStreamOpen(
+		NUI_IMAGE_TYPE_DEPTH,            // Depth camera or rgb camera?
+		NUI_IMAGE_RESOLUTION_320x240,    // Image resolution
+		0,      // Image stream flags, e.g. near mode
+		2,      // Number of frames to buffer
+		NULL,   // Event handle
+		&depthStream);
+
+	// KEK
+	m_VideoBuffer = FTCreateImage();
+	if (!m_VideoBuffer)
+	{
+		return false;
+	}
+
+	HRESULT hr = m_VideoBuffer->Allocate(640, 480, FTIMAGEFORMAT_UINT8_B8G8R8X8);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	m_DepthBuffer = FTCreateImage();
+	if (!m_DepthBuffer)
+	{
+		return false;
+	}
+
+	hr = m_DepthBuffer->Allocate(320, 240, FTIMAGEFORMAT_UINT16_D13P3);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
 	return sensor;
 }
 
@@ -75,18 +110,20 @@ bool Kinect::initFaceTrack() {
 
 	// Prepare image interfaces that hold RGB and depth data
 	pColorFrame = FTCreateImage();
-	//pDepthFrame = FTCreateImage();
+	pDepthFrame = FTCreateImage();
 	//if (!pColorFrame || !pDepthFrame) return false;
-	if (!pColorFrame) return false;
+	if (!pColorFrame || FAILED(hr = pColorFrame->Allocate(640, 480, FTIMAGEFORMAT_UINT8_B8G8R8X8))) return false;
+	if (!pDepthFrame || FAILED(hr = pDepthFrame->Allocate(320, 240, FTIMAGEFORMAT_UINT16_D13P3))) return false;
 
 	// Attach created interfaces to the RGB and depth buffers that are filled with
 	// corresponding RGB and depth frame data from Kinect cameras
-	pColorFrame->Attach(640, 480, data, FTIMAGEFORMAT_UINT8_B8G8R8A8, 640 * 3);
+	// pColorFrame->Attach(640, 480, data, FTIMAGEFORMAT_UINT8_B8G8R8A8, 640 * 3);
 	//pDepthFrame->Attach(320, 240, depthCameraFrameBuffer, FTIMAGEFORMAT_UINT16_D13P3, 320 * 2);
 	// You can also use Allocate() method in which case IFTImage interfaces own their memory.
 	// In this case use CopyTo() method to copy buffers
 
-	//sensorData.pVideoFrame = pColorFrame;
+	sensorData.pVideoFrame = pColorFrame;
+	sensorData.pDepthFrame = pDepthFrame;
 	sensorData.ZoomFactor = 1.0f;       // Not used must be 1.0
 	sensorData.ViewOffset = POINT{0, 0}; // Not used must be (0,0)
 
@@ -129,7 +166,7 @@ bool Kinect::initVBO() {
 	return true;
 }
 
-void Kinect::getKinectData(GLubyte* dest) {
+void Kinect::getKinectVideo(GLubyte* dest) {
 	NUI_IMAGE_FRAME imageFrame;
 	NUI_LOCKED_RECT LockedRect;
 	if (sensor->NuiImageStreamGetNextFrame(rgbStream, 0, &imageFrame) < 0) return;
@@ -143,45 +180,65 @@ void Kinect::getKinectData(GLubyte* dest) {
 		while (curr < dataEnd) {
 			*dest++ = *curr++;
 		}
+		memcpy(m_VideoBuffer->GetBuffer(), PBYTE(LockedRect.pBits), std::min(m_VideoBuffer->GetBufferSize(), UINT(texture->BufferLen())));
 	}
 	texture->UnlockRect(0);
 	sensor->NuiImageStreamReleaseFrame(rgbStream, &imageFrame);
 }
 
-void Kinect::update() {
-	getKinectData(data);
+void Kinect::getKinectDepth() {
+	NUI_IMAGE_FRAME pImageFrame;
+	NUI_LOCKED_RECT LockedRect;
 
-	// Check if we are already tracking a face
-	if (!isTracked)
+	HRESULT hr = sensor->NuiImageStreamGetNextFrame(depthStream, 0, &pImageFrame);
+
+	if (FAILED(hr))
 	{
-		// Initiate face tracking. This call is more expensive and
-		// searches the input image for a face.
-		HRESULT hr = pFT->StartTracking(&sensorData, NULL, NULL, pFTResult);
-		if (SUCCEEDED(hr))
-		{
-			std::cout << "DETECTS FACE" << std::endl;
-			isTracked = true;
-		}
+		return;
+	}
 
-		else
-		{
-			// Handle errors
-			isTracked = false;
-		}
+	INuiFrameTexture* pTexture = pImageFrame.pFrameTexture;
+	pTexture->LockRect(0, &LockedRect, NULL, 0);
+	if (LockedRect.Pitch != 0)
+	{   // Copy depth frame to face tracking
+		memcpy(m_DepthBuffer->GetBuffer(), PBYTE(LockedRect.pBits), std::min(m_DepthBuffer->GetBufferSize(), UINT(pTexture->BufferLen())));
 	}
 	else
 	{
-		// Continue tracking. It uses a previously known face position,
-		// so it is an inexpensive call.
-		HRESULT hr = pFT->ContinueTracking(&sensorData, NULL, pFTResult);
-		if (FAILED(hr))
-		{
-			// Handle errors
-			isTracked = false;
+		std::cout << "Buffer length of received depth texture is bogus" << std::endl;
+	}
+
+	pTexture->UnlockRect(0);
+	sensor->NuiImageStreamReleaseFrame(depthStream, &pImageFrame);
+}
+
+void Kinect::update() {
+	getKinectVideo(data);
+	getKinectDepth();
+
+	HRESULT hrFT = E_FAIL;
+
+	if (kinect && GetVideoBuffer()) {
+		HRESULT hrCopy = m_VideoBuffer->CopyTo(pColorFrame, NULL, 0, 0);
+
+		if (SUCCEEDED(hrCopy) && GetDepthBuffer()) {
+			hrCopy = m_DepthBuffer->CopyTo(pDepthFrame, NULL, 0, 0);
+		}
+		
+		if (SUCCEEDED(hrCopy)) {
+			if (!isTracked) {
+				hrFT = pFT->StartTracking(&sensorData, NULL, NULL, pFTResult);
+			}
+			else {
+				hrFT = pFT->ContinueTracking(&sensorData, NULL, pFTResult);
+			}
 		}
 	}
 
+	isTracked = SUCCEEDED(hrFT) && SUCCEEDED(pFTResult->GetStatus());
+
 	// Do something with pFTResult.
+	if (isTracked) std::cout << "DETECTS FACE" << std::endl;
 
 	// Terminate on some criteria.
 }

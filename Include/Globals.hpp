@@ -5,6 +5,11 @@
 #include <stdlib.h>
 #include <string>
 #include <cstring>
+#include <malloc.h>
+#include <memory.h>
+#include <crtdbg.h>
+#include <cmath>
+
 
 // openGL
 #include <GL/glew.h>
