@@ -13,27 +13,29 @@ public:
 	bool initKinect();
 	bool initFaceTrack();
 	bool initVBO();
-	void getKinectVideo(GLubyte* dest);
+	void getKinectVideo();
 	void getKinectDepth();
 	void update();
 	void render();
 
 	IFTImage*   GetVideoBuffer() { return(m_VideoBuffer); };
 	IFTImage*   GetDepthBuffer() { return(m_DepthBuffer); };
+	HRESULT GetVideoConfiguration(FT_CAMERA_CONFIG* videoConfig);
+	HRESULT GetDepthConfiguration(FT_CAMERA_CONFIG* depthConfig);
+	void SetCenterOfImage(IFTResult* pResult);
 
 private:
 
 	// OpenGL Variables
 	GLuint textureId;              // ID of the texture to contain Kinect RGB Data
-	GLubyte data[WNDW_WIDTH*WNDW_HEIGHT * 4];  // BGRA array containing the texture data
 	GLuint vertexbuffer;
 	GLuint uvbuffer;
 	GLuint program_handle;
 	GLuint texture_handle;
 
 	// Kinect variables
-	HANDLE rgbStream;				// The identifier of the Kinect's RGB Camera
-	HANDLE depthStream;
+	HANDLE rgbStream;				// The handler of the Kinect's RGB Camera
+	HANDLE depthStream;				// The handler of the Kinect's depth Camera
 	INuiSensor* sensor;				// The Kinect sensor
 	IFTFaceTracker* pFT;			// The Face Tracking COM interface
 	IFTResult* pFTResult;			// The Face Tracking result object
@@ -46,4 +48,6 @@ private:
 	// Face Tracking
 	IFTImage*   m_VideoBuffer;
 	IFTImage*	m_DepthBuffer;
+	float       m_XCenterFace;
+	float       m_YCenterFace;
 };

@@ -7,10 +7,12 @@ Kinect::~Kinect() {
 	glDeleteBuffers(1, &uvbuffer);
 	glDeleteProgram(program_handle);
 	glDeleteTextures(1, &textureId);
-	pFTResult->Release();
-	pColorFrame->Release();
-	pDepthFrame->Release();
-	pFT->Release();
+	if (kinect) {
+		pFTResult->Release();
+		pColorFrame->Release();
+		pDepthFrame->Release();
+		pFT->Release();
+	}
 }
 
 bool Kinect::init() {
@@ -27,7 +29,7 @@ bool Kinect::init() {
 		glBindTexture(GL_TEXTURE_2D, textureId);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WNDW_WIDTH, WNDW_HEIGHT, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WNDW_WIDTH, WNDW_HEIGHT, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)NULL);
 	}
 
 	return kinect;
@@ -111,16 +113,9 @@ bool Kinect::initFaceTrack() {
 	// Prepare image interfaces that hold RGB and depth data
 	pColorFrame = FTCreateImage();
 	pDepthFrame = FTCreateImage();
-	//if (!pColorFrame || !pDepthFrame) return false;
 	if (!pColorFrame || FAILED(hr = pColorFrame->Allocate(640, 480, FTIMAGEFORMAT_UINT8_B8G8R8X8))) return false;
 	if (!pDepthFrame || FAILED(hr = pDepthFrame->Allocate(320, 240, FTIMAGEFORMAT_UINT16_D13P3))) return false;
 
-	// Attach created interfaces to the RGB and depth buffers that are filled with
-	// corresponding RGB and depth frame data from Kinect cameras
-	// pColorFrame->Attach(640, 480, data, FTIMAGEFORMAT_UINT8_B8G8R8A8, 640 * 3);
-	//pDepthFrame->Attach(320, 240, depthCameraFrameBuffer, FTIMAGEFORMAT_UINT16_D13P3, 320 * 2);
-	// You can also use Allocate() method in which case IFTImage interfaces own their memory.
-	// In this case use CopyTo() method to copy buffers
 
 	sensorData.pVideoFrame = pColorFrame;
 	sensorData.pDepthFrame = pDepthFrame;
@@ -128,6 +123,7 @@ bool Kinect::initFaceTrack() {
 	sensorData.ViewOffset = POINT{0, 0}; // Not used must be (0,0)
 
 	isTracked = false;
+	SetCenterOfImage(NULL);
 
 	return true;
 }
@@ -166,22 +162,21 @@ bool Kinect::initVBO() {
 	return true;
 }
 
-void Kinect::getKinectVideo(GLubyte* dest) {
+void Kinect::getKinectVideo() {
 	NUI_IMAGE_FRAME imageFrame;
 	NUI_LOCKED_RECT LockedRect;
 	if (sensor->NuiImageStreamGetNextFrame(rgbStream, 0, &imageFrame) < 0) return;
 	INuiFrameTexture* texture = imageFrame.pFrameTexture;
 	texture->LockRect(0, &LockedRect, NULL, 0);
 	if (LockedRect.Pitch != 0)
-	{
-		const BYTE* curr = (const BYTE*)LockedRect.pBits;
-		const BYTE* dataEnd = curr + (KINECT_WIDTH*KINECT_HEIGHT) * 4;
-
-		while (curr < dataEnd) {
-			*dest++ = *curr++;
-		}
+	{	// Copy image frame		
 		memcpy(m_VideoBuffer->GetBuffer(), PBYTE(LockedRect.pBits), std::min(m_VideoBuffer->GetBufferSize(), UINT(texture->BufferLen())));
 	}
+	else
+	{
+		std::cout << "Buffer length of received image texture is bogus" << std::endl;
+	}
+
 	texture->UnlockRect(0);
 	sensor->NuiImageStreamReleaseFrame(rgbStream, &imageFrame);
 }
@@ -189,18 +184,11 @@ void Kinect::getKinectVideo(GLubyte* dest) {
 void Kinect::getKinectDepth() {
 	NUI_IMAGE_FRAME pImageFrame;
 	NUI_LOCKED_RECT LockedRect;
-
-	HRESULT hr = sensor->NuiImageStreamGetNextFrame(depthStream, 0, &pImageFrame);
-
-	if (FAILED(hr))
-	{
-		return;
-	}
-
+	if (sensor->NuiImageStreamGetNextFrame(depthStream, 0, &pImageFrame) < 0) return;
 	INuiFrameTexture* pTexture = pImageFrame.pFrameTexture;
 	pTexture->LockRect(0, &LockedRect, NULL, 0);
 	if (LockedRect.Pitch != 0)
-	{   // Copy depth frame to face tracking
+	{   // Copy depth frame
 		memcpy(m_DepthBuffer->GetBuffer(), PBYTE(LockedRect.pBits), std::min(m_DepthBuffer->GetBufferSize(), UINT(pTexture->BufferLen())));
 	}
 	else
@@ -213,7 +201,7 @@ void Kinect::getKinectDepth() {
 }
 
 void Kinect::update() {
-	getKinectVideo(data);
+	getKinectVideo();
 	getKinectDepth();
 
 	HRESULT hrFT = E_FAIL;
@@ -236,9 +224,42 @@ void Kinect::update() {
 	}
 
 	isTracked = SUCCEEDED(hrFT) && SUCCEEDED(pFTResult->GetStatus());
+	SetCenterOfImage(pFTResult);
 
 	// Do something with pFTResult.
-	if (isTracked) std::cout << "DETECTS FACE" << std::endl;
+	if (isTracked) {
+		std::cout << "DETECTS FACE" << std::endl;
+		FLOAT* pSU = NULL;
+		UINT numSU;
+		BOOL suConverged;
+		pFT->GetShapeUnits(NULL, &pSU, &numSU, &suConverged);
+		POINT viewOffset = { 0, 0 };
+		FT_CAMERA_CONFIG cameraConfig;
+		if (kinect)
+		{
+			GetVideoConfiguration(&cameraConfig);
+		}
+		else
+		{
+			cameraConfig.Width = 640;
+			cameraConfig.Height = 480;
+			cameraConfig.FocalLength = 500.0f;
+		}
+		IFTModel* ftModel;
+		HRESULT hr = pFT->GetFaceModel(&ftModel);
+		if (SUCCEEDED(hr))
+		{
+			hr = VisualizeFaceModel(pColorFrame, ftModel, &cameraConfig, pSU, 1.0, viewOffset, pFTResult, 0x00FFFF00);
+			ftModel->Release();
+		}
+		else {
+			std::cout << "Could not get the Face Model" << std::endl;
+		}
+
+		if (!SUCCEEDED(hr)) {
+			std::cout << "Could not draw the Face Model" << std::endl;
+		}
+	}
 
 	// Terminate on some criteria.
 }
@@ -246,7 +267,7 @@ void Kinect::update() {
 void Kinect::render() {
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	if (kinect) glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, KINECT_WIDTH, KINECT_HEIGHT, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)data);
+	if (kinect) glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, KINECT_WIDTH, KINECT_HEIGHT, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (GLvoid*)pColorFrame->GetBuffer());
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor3f(1.0f, 1.0f, 1.0f);
 
@@ -266,7 +287,7 @@ void Kinect::render() {
 		GL_FALSE,    // normalized?
 		0,           // stride
 		(void*)0     // array buffer offset
-		);
+	);
 
 	glEnableVertexAttribArray(1);
 	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
@@ -277,10 +298,151 @@ void Kinect::render() {
 		GL_FALSE,    // normalized?
 		0,           // stride
 		(void*)0     // array buffer offset
-		);
+	);
 
 	glDrawArrays(GL_QUADS, 0, 4);
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 }
+
+HRESULT Kinect::GetVideoConfiguration(FT_CAMERA_CONFIG* videoConfig)
+{
+	if (!videoConfig)
+	{
+		return E_POINTER;
+	}
+
+	UINT width = m_VideoBuffer ? m_VideoBuffer->GetWidth() : 0;
+	UINT height = m_VideoBuffer ? m_VideoBuffer->GetHeight() : 0;
+	FLOAT focalLength = 0.f;
+
+	if (width == 640 && height == 480)
+	{
+		focalLength = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
+	}
+	else if (width == 1280 && height == 960)
+	{
+		focalLength = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS * 2.f;
+	}
+
+	if (focalLength == 0.f)
+	{
+		return E_UNEXPECTED;
+	}
+
+
+	videoConfig->FocalLength = focalLength;
+	videoConfig->Width = width;
+	videoConfig->Height = height;
+	return(S_OK);
+}
+
+HRESULT Kinect::GetDepthConfiguration(FT_CAMERA_CONFIG* depthConfig)
+{
+	if (!depthConfig)
+	{
+		return E_POINTER;
+	}
+
+	UINT width = m_DepthBuffer ? m_DepthBuffer->GetWidth() : 0;
+	UINT height = m_DepthBuffer ? m_DepthBuffer->GetHeight() : 0;
+	FLOAT focalLength = 0.f;
+
+	if (width == 80 && height == 60)
+	{
+		focalLength = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS / 4.f;
+	}
+	else if (width == 320 && height == 240)
+	{
+		focalLength = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
+	}
+	else if (width == 640 && height == 480)
+	{
+		focalLength = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS * 2.f;
+	}
+
+	if (focalLength == 0.f)
+	{
+		return E_UNEXPECTED;
+	}
+
+	depthConfig->FocalLength = focalLength;
+	depthConfig->Width = width;
+	depthConfig->Height = height;
+
+	return S_OK;
+}
+
+void Kinect::SetCenterOfImage(IFTResult* pResult)
+{
+	float centerX = ((float)pColorFrame->GetWidth()) / 2.0f;
+	float centerY = ((float)pColorFrame->GetHeight()) / 2.0f;
+	if (pResult)
+	{
+		if (SUCCEEDED(pResult->GetStatus()))
+		{
+			RECT faceRect;
+			pResult->GetFaceRect(&faceRect);
+			centerX = (faceRect.left + faceRect.right) / 2.0f;
+			centerY = (faceRect.top + faceRect.bottom) / 2.0f;
+		}
+		m_XCenterFace += 0.02f*(centerX - m_XCenterFace);
+		m_YCenterFace += 0.02f*(centerY - m_YCenterFace);
+	}
+	else
+	{
+		m_XCenterFace = centerX;
+		m_YCenterFace = centerY;
+	}
+}
+
+//HRESULT Kinect::GetClosestHint(FT_VECTOR3D* pHint3D)
+//{
+//	int selectedSkeleton = -1;
+//	float smallestDistance = 0;
+//
+//	if (!pHint3D)
+//	{
+//		return(E_POINTER);
+//	}
+//
+//	if (pHint3D[1].x == 0 && pHint3D[1].y == 0 && pHint3D[1].z == 0)
+//	{
+//		// Get the skeleton closest to the camera
+//		for (int i = 0; i < NUI_SKELETON_COUNT; i++)
+//		{
+//			if (m_SkeletonTracked[i] && (smallestDistance == 0 || m_HeadPoint[i].z < smallestDistance))
+//			{
+//				smallestDistance = m_HeadPoint[i].z;
+//				selectedSkeleton = i;
+//			}
+//		}
+//	}
+//	else
+//	{   // Get the skeleton closest to the previous position
+//		for (int i = 0; i < NUI_SKELETON_COUNT; i++)
+//		{
+//			if (m_SkeletonTracked[i])
+//			{
+//				float d = abs(m_HeadPoint[i].x - pHint3D[1].x) +
+//					abs(m_HeadPoint[i].y - pHint3D[1].y) +
+//					abs(m_HeadPoint[i].z - pHint3D[1].z);
+//				if (smallestDistance == 0 || d < smallestDistance)
+//				{
+//					smallestDistance = d;
+//					selectedSkeleton = i;
+//				}
+//			}
+//		}
+//	}
+//	if (selectedSkeleton == -1)
+//	{
+//		return E_FAIL;
+//	}
+//
+//	pHint3D[0] = m_NeckPoint[selectedSkeleton];
+//	pHint3D[1] = m_HeadPoint[selectedSkeleton];
+//
+//	return S_OK;
+//}
