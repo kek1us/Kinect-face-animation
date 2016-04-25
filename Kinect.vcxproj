@@ -19,12 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\FBXHelper.cpp" />
     <ClCompile Include="Source\Graphics.cpp" />
     <ClCompile Include="Source\Kinect.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Model.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Include\FBXHelper.hpp" />
     <ClInclude Include="Include\Globals.hpp" />
     <ClInclude Include="Include\Graphics.hpp" />
     <ClInclude Include="Include\Kinect.hpp" />
@@ -94,11 +96,11 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>SFML_STATIC;GLEW_STATIC;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Dependencies\SFML-x86\include;Dependencies\glm;Dependencies\glew\include;Dependencies\Kinect-1.8\inc;Include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Dependencies\FBX\include;Dependencies\FBX\include;Dependencies\SFML-x86\include;Dependencies\glm;Dependencies\glew\include;Dependencies\Kinect-1.8\inc;Include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>Dependencies\SFML-x86\lib;Dependencies\glew\lib\Win32;Dependencies\Kinect-1.8\lib\x86</AdditionalLibraryDirectories>
-      <AdditionalDependencies>FaceTrackLib.lib;Kinect10.lib;glew32s.lib;sfml-graphics-s-d.lib;sfml-window-s-d.lib;sfml-system-s-d.lib;opengl32.lib;winmm.lib;gdi32.lib;freetype.lib;jpeg.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Dependencies\FBX\lib\vs2015\Win32;Dependencies\SFML-x86\lib;Dependencies\glew\lib\Win32;Dependencies\Kinect-1.8\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libfbxsdk-md.lib;FaceTrackLib.lib;Kinect10.lib;glew32s.lib;sfml-graphics-s-d.lib;sfml-window-s-d.lib;sfml-system-s-d.lib;opengl32.lib;winmm.lib;gdi32.lib;freetype.lib;jpeg.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -113,12 +115,12 @@ if $(PlatformName) == x86 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\x86
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>Dependencies\SFML-x64\include;Dependencies\glm;Dependencies\glew\include;Dependencies\Kinect-1.8\inc;Include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Dependencies\FBX\include;Dependencies\SFML-x64\include;Dependencies\glm;Dependencies\glew\include;Dependencies\Kinect-1.8\inc;Include;</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SFML_STATIC;GLEW_STATIC;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>FaceTrackLib.lib;Kinect10.lib;glew32s.lib;sfml-graphics-s-d.lib;sfml-window-s-d.lib;sfml-system-s-d.lib;opengl32.lib;winmm.lib;gdi32.lib;freetype.lib;jpeg.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>Dependencies\SFML-x64\lib;Dependencies\glew\lib\amd64;Dependencies\Kinect-1.8\lib\amd64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libfbxsdk-md.lib;FaceTrackLib.lib;Kinect10.lib;glew32s.lib;sfml-graphics-s-d.lib;sfml-window-s-d.lib;sfml-system-s-d.lib;opengl32.lib;winmm.lib;gdi32.lib;freetype.lib;jpeg.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Dependencies\FBX\lib\vs2015\amd64;Dependencies\SFML-x64\lib;Dependencies\glew\lib\amd64;Dependencies\Kinect-1.8\lib\amd64</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -135,14 +137,14 @@ if $(PlatformName) == x86 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\x86
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>Dependencies\SFML-x86\include;Dependencies\glm;Dependencies\glew\include;Dependencies\Kinect-1.8\inc;Include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Dependencies\FBX\include;Dependencies\SFML-x86\include;Dependencies\glm;Dependencies\glew\include;Dependencies\Kinect-1.8\inc;Include;</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SFML_STATIC;GLEW_STATIC;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>Dependencies\SFML-x86\lib;Dependencies\glew\lib\Win32;Dependencies\Kinect-1.8\lib\x86</AdditionalLibraryDirectories>
-      <AdditionalDependencies>FaceTrackLib.lib;Kinect10.lib;glew32s.lib;sfml-graphics-s.lib;sfml-window-s.lib;sfml-system-s.lib;opengl32.lib;winmm.lib;gdi32.lib;freetype.lib;jpeg.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Dependencies\FBX\lib\vs2015\Win32;Dependencies\SFML-x86\lib;Dependencies\glew\lib\Win32;Dependencies\Kinect-1.8\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libfbxsdk-md.lib;FaceTrackLib.lib;Kinect10.lib;glew32s.lib;sfml-graphics-s.lib;sfml-window-s.lib;sfml-system-s.lib;opengl32.lib;winmm.lib;gdi32.lib;freetype.lib;jpeg.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>NotSet</SubSystem>
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -160,15 +162,15 @@ if $(PlatformName) == x86 XCOPY "$(ProjectDir)Dependencies\Kinect-1.8\Redist\x86
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>Dependencies\SFML-x64\include;Dependencies\glm;Dependencies\glew\include;Dependencies\Kinect-1.8\inc;Include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Dependencies\FBX\include;Dependencies\SFML-x64\include;Dependencies\glm;Dependencies\glew\include;Dependencies\Kinect-1.8\inc;Include;</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SFML_STATIC;GLEW_STATIC;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>Dependencies\SFML-x64\lib;Dependencies\glew\lib\amd64;Dependencies\Kinect-1.8\lib\amd64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>FaceTrackLib.lib;Kinect10.lib;glew32s.lib;sfml-graphics-s.lib;sfml-window-s.lib;sfml-system-s.lib;opengl32.lib;winmm.lib;gdi32.lib;freetype.lib;jpeg.lib;kernel32.lib;user32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Dependencies\FBX\lib\vs2015\amd64;Dependencies\SFML-x64\lib;Dependencies\glew\lib\amd64;Dependencies\Kinect-1.8\lib\amd64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libfbxsdk-md.lib;FaceTrackLib.lib;Kinect10.lib;glew32s.lib;sfml-graphics-s.lib;sfml-window-s.lib;sfml-system-s.lib;opengl32.lib;winmm.lib;gdi32.lib;freetype.lib;jpeg.lib;kernel32.lib;user32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>NotSet</SubSystem>
       <EntryPointSymbol>
       </EntryPointSymbol>

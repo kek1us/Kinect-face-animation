@@ -14,7 +14,8 @@ Model::~Model() {
 }
 
 bool Model::init() {
-	if (!loadModel(MODEL_SRC))  exit(EXIT_FAILURE);
+	//if (!loadModel(MODEL_SRC))  exit(EXIT_FAILURE);
+	if (!loadFBX(MODEL_SRC)) exit(EXIT_FAILURE);
 	if (!initVBO()) exit(EXIT_FAILURE);
 	textureId = loadTex(TEXTURE_SRC);
 	return true;
@@ -27,7 +28,7 @@ bool Model::initVBO() {
 
 	glGenBuffers(1, &vertexbuffer_triangles);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_triangles);
-	glBufferData(GL_ARRAY_BUFFER, vertices_triangles.size() * sizeof(glm::vec3), &vertices_triangles[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
 
 	glGenBuffers(1, &uvbuffer_quads);
 	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer_quads);
@@ -35,7 +36,7 @@ bool Model::initVBO() {
 
 	glGenBuffers(1, &uvbuffer_triangles);
 	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer_triangles);
-	glBufferData(GL_ARRAY_BUFFER, uvs_triangles.size() * sizeof(glm::vec2), &uvs_triangles[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 
 	glGenBuffers(1, &normalbuffer_quads);
 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer_quads);
@@ -43,7 +44,7 @@ bool Model::initVBO() {
 
 	glGenBuffers(1, &normalbuffer_triangles);
 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer_triangles);
-	glBufferData(GL_ARRAY_BUFFER, normals_triangles.size() * sizeof(glm::vec3), &normals_triangles[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
 
 	program_handle = loadShaders("Dependencies/Shaders/Model.vert", "Dependencies/Shaders/Model.frag");
 	texture_handle = glGetUniformLocation(program_handle, "myTextureSampler");
@@ -180,6 +181,71 @@ bool Model::loadModel(std::string filename) {
 	return true;
 }
 
+bool Model::loadFBX(std::string filename) {
+	FbxManager* lSdkManager = NULL;
+	FbxScene* lScene = NULL;
+	bool lResult = true;
+
+	// Prepare the FBX SDK.
+	InitializeSdkObjects(lSdkManager, lScene);
+
+	// Load the scene
+	FbxString lFilePath(filename.c_str());
+	lResult = LoadScene(lSdkManager, lScene, lFilePath.Buffer());
+
+	// Load the model
+	FbxNode* lNode = lScene->GetRootNode();
+	this->getFBXData(lNode);
+
+	// Destroy all objects created by the FBX SDK.
+	DestroySdkObjects(lSdkManager, lResult);
+
+	if (lResult) FBXSDK_printf("THERE WE GO, BOIS!\n");
+
+	return lResult;
+}
+
+void Model::getFBXData(FbxNode* node) {
+	int numChilds = node->GetChildCount();
+
+	for (int i = 0; i < numChilds; i++) {
+		FbxNode* childNode = node->GetChild(i);
+		FbxMesh* mesh = childNode->GetMesh();
+
+		if (mesh != NULL) {
+			// Obtain the vertices
+			int numVertices = mesh->GetControlPointsCount();
+
+			for (int j = 0; j < numVertices; j++) {
+				FbxVector4 vertex = mesh->GetControlPointAt(j);
+				vertices.push_back(glm::vec3((float) vertex[0], (float) vertex[1], (float) vertex[2]));
+			}
+
+			// Obtain the normals and UVs
+			FbxGeometryElementNormal* normalElement = mesh->GetElementNormal();
+			if (normalElement)
+			{
+				for (int polyCounter = 0; polyCounter < mesh->GetPolygonCount(); polyCounter++)
+				{
+					FbxLayerElementArrayTemplate<FbxVector2>* uvVertices = 0;
+					mesh->GetTextureUV(&uvVertices, FbxLayerElement::eTextureDiffuse);
+
+					for (int k = 0; k < 3; k++)
+					{
+						FbxVector4 normal = normalElement->GetDirectArray().GetAt(polyCounter * 3 + k);
+						normals.push_back(glm::vec3((float) normal[0], (float) normal[1], (float) normal[2]));
+
+						FbxVector2 uv = uvVertices->GetAt(mesh->GetTextureUVIndex(polyCounter, k));
+						uvs.push_back(glm::vec2((float) uv[0], (float) uv[1]));
+					}
+				}
+			}
+
+		}
+		this->getFBXData(childNode);
+	}
+}
+
 void Model::update() {
 
 }
@@ -211,46 +277,46 @@ void Model::render() {
 	// Set our "myTextureSampler" sampler to user Texture Unit 0
 	glUniform1i(texture_handle, 0);
 
-	// 1rst attribute buffer : vertices
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_quads);
-	glVertexAttribPointer(
-		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-		3,                  // size
-		GL_FLOAT,           // type
-		GL_FALSE,           // normalized?
-		0,                  // stride
-		(void*)0            // array buffer offset
-		);
-	// 2nd attribute buffer : colors
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer_quads);
-	glVertexAttribPointer(
-		1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
-		2,                                // size
-		GL_FLOAT,	                       // type
-		GL_TRUE,                         // normalized?
-		0,                                // stride
-		(void*)0                          // array buffer offset
-		);
+	//// 1rst attribute buffer : vertices
+	//glEnableVertexAttribArray(0);
+	//glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_quads);
+	//glVertexAttribPointer(
+	//	0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+	//	3,                  // size
+	//	GL_FLOAT,           // type
+	//	GL_FALSE,           // normalized?
+	//	0,                  // stride
+	//	(void*)0            // array buffer offset
+	//	);
+	//// 2nd attribute buffer : colors
+	//glEnableVertexAttribArray(1);
+	//glBindBuffer(GL_ARRAY_BUFFER, uvbuffer_quads);
+	//glVertexAttribPointer(
+	//	1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+	//	2,                                // size
+	//	GL_FLOAT,	                       // type
+	//	GL_TRUE,                         // normalized?
+	//	0,                                // stride
+	//	(void*)0                          // array buffer offset
+	//	);
 
-	// 3rd attribute buffer : normals
-	glEnableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer_quads);
-	glVertexAttribPointer(
-		2,                                // attribute
-		3,                                // size
-		GL_FLOAT,                         // type
-		GL_FALSE,                         // normalized?
-		0,                                // stride
-		(void*)0                          // array buffer offset
-		);
+	//// 3rd attribute buffer : normals
+	//glEnableVertexAttribArray(2);
+	//glBindBuffer(GL_ARRAY_BUFFER, normalbuffer_quads);
+	//glVertexAttribPointer(
+	//	2,                                // attribute
+	//	3,                                // size
+	//	GL_FLOAT,                         // type
+	//	GL_FALSE,                         // normalized?
+	//	0,                                // stride
+	//	(void*)0                          // array buffer offset
+	//	);
 
-	glDrawArrays(GL_QUADS, 0, vertices_quads.size());
+	//glDrawArrays(GL_QUADS, 0, vertices_quads.size());
 
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
+	//glDisableVertexAttribArray(0);
+	//glDisableVertexAttribArray(1);
+	//glDisableVertexAttribArray(2);
 
 	// 1rst attribute buffer : vertices
 	glEnableVertexAttribArray(0);
@@ -287,7 +353,7 @@ void Model::render() {
 		(void*)0                          // array buffer offset
 		);
 
-	glDrawArrays(GL_TRIANGLES, 0, vertices_triangles.size());
+	glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);

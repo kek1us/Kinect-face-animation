@@ -2,6 +2,7 @@
 
 #include "Globals.hpp"
 #include "Graphics.hpp"
+#include "FBXHelper.hpp"
 
 class Model {
 
@@ -12,6 +13,8 @@ public:
 	bool init();
 	bool initVBO();
 	bool loadModel(std::string filename);
+	bool loadFBX(std::string filename);
+	void getFBXData(FbxNode* node);
 	void update();
 	void render();
 
@@ -39,4 +42,8 @@ private:
 	std::vector < glm::vec3 > vertices_triangles;
 	std::vector < glm::vec2 > uvs_triangles;
 	std::vector < glm::vec3 > normals_triangles;
+
+	std::vector < glm::vec3 > vertices;
+	std::vector < glm::vec2 > uvs;
+	std::vector < glm::vec3 > normals;
 };

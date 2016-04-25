@@ -25,11 +25,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 
-// Kinect lirary
+// Kinect SDKs
 #include <NuiApi.h>
 #include <NuiImageCamera.h>
 #include <NuiSensor.h>
 #include <FaceTrackLib.h>
+
+// FBX SDK
+#include <fbxsdk.h>
 
 // Global variables
 #define DEBUG_MODE		0	// 0 off | 1 on
