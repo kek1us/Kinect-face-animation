@@ -213,34 +213,44 @@ void Model::getFBXData(FbxNode* node) {
 		FbxMesh* mesh = childNode->GetMesh();
 
 		if (mesh != NULL) {
-			// Obtain the vertices
-			int numVertices = mesh->GetControlPointsCount();
+			// Get control points (=vertices for a mesh)
+			FbxVector4* fbxControlPoints = mesh->GetControlPoints();
 
-			for (int j = 0; j < numVertices; j++) {
-				FbxVector4 vertex = mesh->GetControlPointAt(j);
-				vertices.push_back(glm::vec3((float) vertex[0], (float) vertex[1], (float) vertex[2]));
-			}
+			// For each polygon in the input mesh
+			for (int iPolygon = 0; iPolygon < mesh->GetPolygonCount(); iPolygon++) {
+				// For each vertex in the polygon
+				for (unsigned iPolygonVertex = 0; iPolygonVertex < 3; iPolygonVertex++) {
+					int fbxCornerIndex = mesh->GetPolygonVertex(iPolygon, iPolygonVertex);
 
-			// Obtain the normals and UVs
-			FbxGeometryElementNormal* normalElement = mesh->GetElementNormal();
-			if (normalElement)
-			{
-				for (int polyCounter = 0; polyCounter < mesh->GetPolygonCount(); polyCounter++)
-				{
-					FbxLayerElementArrayTemplate<FbxVector2>* uvVertices = 0;
-					mesh->GetTextureUV(&uvVertices, FbxLayerElement::eTextureDiffuse);
+					// Get vertex position
+					FbxVector4 fbxVertex = fbxControlPoints[fbxCornerIndex];
+					vertices.push_back(glm::vec3((float)fbxVertex[0], (float)fbxVertex[1], (float)fbxVertex[2]));
 
-					for (int k = 0; k < 3; k++)
-					{
-						FbxVector4 normal = normalElement->GetDirectArray().GetAt(polyCounter * 3 + k);
-						normals.push_back(glm::vec3((float) normal[0], (float) normal[1], (float) normal[2]));
+					// Get normal
+					FbxVector4 fbxNormal;
+					mesh->GetPolygonVertexNormal(iPolygon, iPolygonVertex, fbxNormal);
+					fbxNormal.Normalize();
+					normals.push_back(glm::vec3((float)fbxNormal[0], (float)fbxNormal[1], (float)fbxNormal[2]));
 
-						FbxVector2 uv = uvVertices->GetAt(mesh->GetTextureUVIndex(polyCounter, k));
-						uvs.push_back(glm::vec2((float) uv[0], (float) uv[1]));
+					// Get texture coordinate
+					FbxVector2 fbxUV = FbxVector2(0.0, 0.0);
+					FbxLayerElementUV* fbxLayerUV = mesh->GetLayer(0)->GetUVs();
+					if (fbxLayerUV) {
+						int iUVIndex = 0;
+						switch (fbxLayerUV->GetMappingMode()) {
+						case FbxLayerElement::eByControlPoint:
+							iUVIndex = fbxCornerIndex;
+							break;
+
+						case FbxLayerElement::eByPolygonVertex:
+							iUVIndex = mesh->GetTextureUVIndex(iPolygon, iPolygonVertex, FbxLayerElement::eTextureDiffuse);
+							break;
+						}
+						fbxUV = fbxLayerUV->GetDirectArray().GetAt(iUVIndex);
 					}
+					uvs.push_back(glm::vec2((float)fbxUV[0], (float)fbxUV[1]));
 				}
 			}
-
 		}
 		this->getFBXData(childNode);
 	}

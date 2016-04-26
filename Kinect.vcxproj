@@ -35,6 +35,8 @@
   <ItemGroup>
     <None Include="Dependencies\Shaders\Kinect.frag" />
     <None Include="Dependencies\Shaders\Kinect.vert" />
+    <None Include="Dependencies\Shaders\Model.frag" />
+    <None Include="Dependencies\Shaders\Model.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A9121095-F482-46A5-82FA-881C115E1B80}</ProjectGuid>

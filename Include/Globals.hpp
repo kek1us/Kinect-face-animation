@@ -41,6 +41,6 @@
 #define WNDW_HEIGHT		480
 #define KINECT_WIDTH	640
 #define KINECT_HEIGHT	480
-#define MODEL_SRC		"Assets/BorisT.obj"
+#define MODEL_SRC		"Assets/Boris.fbx"
 #define TEXTURE_SRC		"Assets/model.jpg"
 #define KINECT_FAIL_SRC	"Assets/fail.jpg"

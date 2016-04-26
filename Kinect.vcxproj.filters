@@ -55,5 +55,11 @@
     <None Include="Dependencies\Shaders\Kinect.vert">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="Dependencies\Shaders\Model.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Dependencies\Shaders\Model.vert">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
