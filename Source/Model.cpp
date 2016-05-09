@@ -265,10 +265,17 @@ void Model::render() {
 
 	// Camera matrix
 	glm::mat4 View = glm::lookAt(
-		glm::vec3(-3.5, 0, 15), // Camera is at (4,3,3), in World Space
-		glm::vec3(0, 0, 0), // and looks at the origin
+		glm::vec3(-1, 0, 25), // Camera is at (4,3,3), in World Space
+		glm::vec3(2, -1, 1), // and looks at the origin
 		glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
 		);
+
+	// Boris
+	//glm::mat4 View = glm::lookAt(
+	//	glm::vec3(-3.5, 0, 15), // Camera is at (4,3,3), in World Space
+	//	glm::vec3(0, 0, 0), // and looks at the origin
+	//	glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+	//	);
 
 	glm::mat4 Model = glm::translate(glm::vec3(-3.5,-2.25,0)) * glm::scale(glm::vec3(0.25,0.25,0.25)) * glm::rotate(0.0f, glm::vec3(0,1,0));
 
