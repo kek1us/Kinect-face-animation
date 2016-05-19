@@ -28,6 +28,7 @@ private:
 	GLuint vertexbuffer_triangles;
 	GLuint uvbuffer_triangles;
 	GLuint normalbuffer_triangles;
+	GLuint materialbuffer_triangles;
 	GLuint program_handle;
 	GLuint texture_handle;
 	GLuint mvp_handle;
@@ -42,8 +43,10 @@ private:
 	std::vector < glm::vec3 > vertices_triangles;
 	std::vector < glm::vec2 > uvs_triangles;
 	std::vector < glm::vec3 > normals_triangles;
+	std::vector < glm::vec3 > material_triangles;
 
 	std::vector < glm::vec3 > vertices;
 	std::vector < glm::vec2 > uvs;
 	std::vector < glm::vec3 > normals;
+	std::vector < glm::vec3 > materials;
 };

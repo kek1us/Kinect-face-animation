@@ -2,6 +2,7 @@
 
 #include "Globals.hpp"
 #include "Graphics.hpp"
+#include "Time.hpp"
 
 class Kinect {
 
@@ -17,6 +18,10 @@ public:
 	void getKinectDepth();
 	void update();
 	void render();
+
+	void playRecord();
+	void record();
+	void stopRecord();
 
 	IFTImage*   GetVideoBuffer() { return(m_VideoBuffer); };
 	IFTImage*   GetDepthBuffer() { return(m_DepthBuffer); };
@@ -42,8 +47,10 @@ private:
 	IFTImage* pColorFrame;			// Image interface that holds RGB data
 	IFTImage* pDepthFrame;			// Image interface that holds depth data
 	FT_SENSOR_DATA sensorData;		// Sensor data structure
+	std::ofstream file;
 	bool kinect;
 	bool isTracked;
+	bool isRecording;
 
 	// Face Tracking
 	IFTImage*   m_VideoBuffer;

@@ -9,7 +9,7 @@
 #include <memory.h>
 #include <crtdbg.h>
 #include <cmath>
-
+#include <iterator>
 
 // openGL
 #include <GL/glew.h>
@@ -41,6 +41,7 @@
 #define WNDW_HEIGHT		480
 #define KINECT_WIDTH	640
 #define KINECT_HEIGHT	480
-#define MODEL_SRC		"Assets/emily.fbx"
+#define MODEL_SRC		"Assets/Boris.fbx"
 #define TEXTURE_SRC		"Assets/model.jpg"
 #define KINECT_FAIL_SRC	"Assets/fail.jpg"
+#define FILE_NAME		"record.txt"

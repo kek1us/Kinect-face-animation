@@ -151,3 +151,24 @@ bool LoadScene(FbxManager* pManager, FbxDocument* pScene, const char* pFilename)
 
 	return lStatus;
 }
+
+void DisplayHierarchy(FbxNode* pNode, int pDepth)
+{
+	FbxString lString;
+	int i;
+
+	for (i = 0; i < pDepth; i++)
+	{
+		lString += "     ";
+	}
+
+	lString += pNode->GetName();
+	lString += "\n";
+
+	FBXSDK_printf(lString.Buffer());
+
+	for (i = 0; i < pNode->GetChildCount(); i++)
+	{
+		DisplayHierarchy(pNode->GetChild(i), pDepth + 1);
+	}
+}

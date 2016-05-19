@@ -18,6 +18,7 @@ Kinect::~Kinect() {
 bool Kinect::init() {
 	//if (!initKinect()) exit(EXIT_FAILURE);
 	kinect = true;
+	isRecording = false;
 	if (!initKinect()) kinect = false;
 	if (!initFaceTrack()) kinect = false;
 	if (!initVBO()) exit(EXIT_FAILURE);
@@ -250,6 +251,22 @@ void Kinect::update() {
 		if (SUCCEEDED(hr))
 		{
 			hr = VisualizeFaceModel(pColorFrame, ftModel, &cameraConfig, pSU, 1.0, viewOffset, pFTResult, 0x00FFFF00);
+			
+			if (isRecording) {
+				FLOAT pHeadScale = 15;
+				FLOAT** pSUCoefs = NULL;
+				UINT pSUCount;
+				BOOL pHaveConverged;
+				HRESULT hr_su = pFT->GetShapeUnits(&pHeadScale, pSUCoefs, &pSUCount, &pHaveConverged);
+				if (!SUCCEEDED(hr_su)) {
+					std::cout << "Could not read the Shape Units of the Face Model" << std::endl;
+				}
+				else {
+					// Print the data of the Face Model to the file
+
+				}
+			}
+
 			ftModel->Release();
 		}
 		else {
@@ -304,6 +321,27 @@ void Kinect::render() {
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
+}
+
+void Kinect::playRecord() {
+	// Play the facial animation's data recorded in the file
+}
+
+void Kinect::record() {
+	if (kinect) {
+		// Record the facial animation's data to a file
+		isRecording = true;
+		file.open(FILE_NAME, std::ofstream::out | std::ofstream::trunc);
+		file << "// Starting recording at " << timefmt("%c");
+	}
+}
+
+void Kinect::stopRecord() {
+	if (kinect) {
+		// Stop recording the facial animation's data
+		isRecording = false;
+		file.close();
+	}
 }
 
 HRESULT Kinect::GetVideoConfiguration(FT_CAMERA_CONFIG* videoConfig)

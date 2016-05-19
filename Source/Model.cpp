@@ -46,6 +46,10 @@ bool Model::initVBO() {
 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer_triangles);
 	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
 
+	glGenBuffers(1, &materialbuffer_triangles);
+	glBindBuffer(GL_ARRAY_BUFFER, materialbuffer_triangles);
+	glBufferData(GL_ARRAY_BUFFER, materials.size() * sizeof(glm::vec3), &materials[0], GL_STATIC_DRAW);
+
 	program_handle = loadShaders("Dependencies/Shaders/Model.vert", "Dependencies/Shaders/Model.frag");
 	texture_handle = glGetUniformLocation(program_handle, "myTextureSampler");
 	mvp_handle = glGetUniformLocation(program_handle, "MVP");
@@ -197,6 +201,10 @@ bool Model::loadFBX(std::string filename) {
 	FbxNode* lNode = lScene->GetRootNode();
 	this->getFBXData(lNode);
 
+	// Display hierarchy
+	FBXSDK_printf("\n\n---------\nHierarchy\n---------\n\n");
+	DisplayHierarchy(lNode, 0);
+
 	// Destroy all objects created by the FBX SDK.
 	DestroySdkObjects(lSdkManager, lResult);
 
@@ -264,18 +272,18 @@ void Model::render() {
 	glm::mat4 Projection = glm::perspective(glm::radians(20.0f), (float)WNDW_WIDTH / (float)WNDW_HEIGHT, 0.1f, 1.0f);
 
 	// Camera matrix
-	glm::mat4 View = glm::lookAt(
-		glm::vec3(-1, 0, 25), // Camera is at (4,3,3), in World Space
-		glm::vec3(2, -1, 1), // and looks at the origin
-		glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
-		);
-
-	// Boris
 	//glm::mat4 View = glm::lookAt(
-	//	glm::vec3(-3.5, 0, 15), // Camera is at (4,3,3), in World Space
-	//	glm::vec3(0, 0, 0), // and looks at the origin
+	//	glm::vec3(-1, 0, 25), // Camera is at (4,3,3), in World Space
+	//	glm::vec3(2, -1, 1), // and looks at the origin
 	//	glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
 	//	);
+
+	// Boris
+	glm::mat4 View = glm::lookAt(
+		glm::vec3(-3.5, 0, 15), // Camera is at (4,3,3), in World Space
+		glm::vec3(0, 0, 0), // and looks at the origin
+		glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+		);
 
 	glm::mat4 Model = glm::translate(glm::vec3(-3.5,-2.25,0)) * glm::scale(glm::vec3(0.25,0.25,0.25)) * glm::rotate(0.0f, glm::vec3(0,1,0));
 
@@ -286,7 +294,7 @@ void Model::render() {
 	glUniformMatrix4fv(mvp_handle, 1, GL_FALSE, &mvp[0][0]);
 	glUniformMatrix4fv(ModelMatrix_handle, 1, GL_FALSE, &Model[0][0]);
 	glUniformMatrix4fv(ViewMatrix_handle, 1, GL_FALSE, &View[0][0]);
-	glUniform3f(Light_handle, 4, 4 + 20, 4);
+	glUniform3f(Light_handle, -3.5, 20, 15);
 
 	// Bind our texture in Texture Unit 0
 	glActiveTexture(GL_TEXTURE0);
@@ -370,9 +378,22 @@ void Model::render() {
 		(void*)0                          // array buffer offset
 		);
 
+	// 3rd attribute buffer : normals
+	glEnableVertexAttribArray(3);
+	glBindBuffer(GL_ARRAY_BUFFER, materialbuffer_triangles);
+	glVertexAttribPointer(
+		3,                                // attribute
+		3,                                // size
+		GL_FLOAT,                         // type
+		GL_FALSE,                         // normalized?
+		0,                                // stride
+		(void*)0                          // array buffer offset
+	);
+
 	glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
+	glDisableVertexAttribArray(3);
 }

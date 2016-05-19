@@ -54,6 +54,7 @@ int main() {
 	Settings.stencilBits = 8;  // Request a 8 bits stencil buffer
 	Settings.antialiasingLevel = 2;  // Request 2 levels of antialiasing
 	sf::Window window(sf::VideoMode(WNDW_WIDTH, WNDW_HEIGHT, 32), APP_NAME, sf::Style::Close, Settings);
+	window.setKeyRepeatEnabled(false); // not count key holding press
 
 	if (!init()) exit(EXIT_FAILURE);
 
@@ -70,8 +71,23 @@ int main() {
 		sf::Event event;
 		while (window.pollEvent(event))
 		{
-			if (event.type == sf::Event::Closed)
-				window.close();
+			switch (event.type)
+			{
+				case sf::Event::Closed:
+					window.close();
+					break;
+				case sf::Event::KeyPressed:
+					switch (event.key.code) {
+						case sf::Keyboard::P: K.playRecord(); break;
+						case sf::Keyboard::R: K.record(); break;
+						case sf::Keyboard::S: K.stopRecord(); break;
+						case sf::Keyboard::Escape: window.close(); break;
+						default: break;
+					}
+					break;
+				default:
+					break;
+			}				
 		}
 
 		elapsed = clock.getElapsedTime();
