@@ -18,6 +18,15 @@ public:
 	void update();
 	void render();
 
+	std::vector<glm::vec3>* getVerticesArray() { return &vertices; }
+	std::vector<glm::vec3>* getNormalsArray() { return &normals; }
+	std::vector<glm::vec2>* getUVsArray() { return &uvs; }
+
+	// PLACEHOLDER
+	void setShocked() { doShocked = true; }
+	void undoShocked() { doShocked = false; }
+	void modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S);
+
 private:
 
 	// OpenGL Variables
@@ -36,6 +45,14 @@ private:
 	GLuint ModelMatrix_handle;
 	GLuint Light_handle;
 
+	// FBX data
+	FbxManager* lSdkManager = NULL;
+	FbxScene* lScene = NULL;
+	FbxAnimLayer * mCurrentAnimLayer;
+	FbxPose * lPose;
+	mutable FbxTime mFrameTime, mStart, mStop, mCurrentTime;
+	mutable FbxTime mCache_Start, mCache_Stop;
+
 	// Model info
 	std::vector < glm::vec3 > vertices_quads;
 	std::vector < glm::vec2 > uvs_quads;
@@ -49,4 +66,8 @@ private:
 	std::vector < glm::vec2 > uvs;
 	std::vector < glm::vec3 > normals;
 	std::vector < glm::vec3 > materials;
+
+	// PLACEHOLDER
+	double shocked;
+	bool doShocked;
 };

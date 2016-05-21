@@ -11,6 +11,9 @@ Model::~Model() {
 	glDeleteBuffers(1, &normalbuffer_triangles);
 	glDeleteProgram(program_handle);
 	glDeleteTextures(1, &textureId);
+
+	// Destroy all objects created by the FBX SDK.
+	DestroySdkObjects(lSdkManager, true);
 }
 
 bool Model::init() {
@@ -186,8 +189,6 @@ bool Model::loadModel(std::string filename) {
 }
 
 bool Model::loadFBX(std::string filename) {
-	FbxManager* lSdkManager = NULL;
-	FbxScene* lScene = NULL;
 	bool lResult = true;
 
 	// Prepare the FBX SDK.
@@ -205,8 +206,66 @@ bool Model::loadFBX(std::string filename) {
 	FBXSDK_printf("\n\n---------\nHierarchy\n---------\n\n");
 	DisplayHierarchy(lNode, 0);
 
-	// Destroy all objects created by the FBX SDK.
-	DestroySdkObjects(lSdkManager, lResult);
+	////////////////////////// HURR DURR
+	// Convert mesh, NURBS and patch into triangle mesh
+	FbxGeometryConverter lGeomConverter(lSdkManager);
+	lGeomConverter.Triangulate(lScene, /*replace*/true);
+
+	FbxArray<FbxString*> mAnimStackNameArray;
+	lScene->FillAnimStackNameArray(mAnimStackNameArray);
+
+	mCache_Start = FBXSDK_TIME_INFINITE;
+	mCache_Stop = FBXSDK_TIME_MINUS_INFINITE;
+	//PreparePointCacheData(lScene, mCache_Start, mCache_Stop);
+
+	// Initialize the frame period.
+	mFrameTime.SetTime(0, 0, 0, 1, 0, lScene->GetGlobalSettings().GetTimeMode());
+
+	int pIndex = 0;
+
+	FbxAnimStack * lCurrentAnimationStack = lScene->FindMember<FbxAnimStack>(mAnimStackNameArray[pIndex]->Buffer());
+	mCurrentAnimLayer = lCurrentAnimationStack->GetMember<FbxAnimLayer>();
+	lScene->SetCurrentAnimationStack(lCurrentAnimationStack);
+
+	FbxTakeInfo* lCurrentTakeInfo = lScene->GetTakeInfo(*(mAnimStackNameArray[pIndex]));
+	if (lCurrentTakeInfo)
+	{
+		mStart = lCurrentTakeInfo->mLocalTimeSpan.GetStart();
+		mStop = lCurrentTakeInfo->mLocalTimeSpan.GetStop();
+	}
+	else
+	{
+		// Take the time line value
+		FbxTimeSpan lTimeLineTimeSpan;
+		lScene->GetGlobalSettings().GetTimelineDefaultTimeSpan(lTimeLineTimeSpan);
+
+		mStart = lTimeLineTimeSpan.GetStart();
+		mStop = lTimeLineTimeSpan.GetStop();
+	}
+
+	// check for smallest start with cache start
+	if (mCache_Start < mStart)
+		mStart = mCache_Start;
+
+	// check for biggest stop with cache stop
+	if (mCache_Stop  > mStop)
+		mStop = mCache_Stop;
+
+	mCurrentTime = mStart;
+
+	shocked = 0;
+	doShocked = true;
+
+	// Get the pose to work with
+	lPose = lScene->GetPose(0);
+
+	modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(0, 0, 0, 1), FbxVector4(0, 0, 0, 0));
+
+	for (int i = 0; i < lPose->GetCount(); ++i) {
+		std::cout << lPose->GetNodeName(i).GetInitialName() << std::endl;
+	}
+
+	/////////////////////////
 
 	if (lResult) FBXSDK_printf("THERE WE GO, BOIS!\n");
 
@@ -264,8 +323,128 @@ void Model::getFBXData(FbxNode* node) {
 	}
 }
 
-void Model::update() {
+void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
+	FbxNode * node;
+	FbxMatrix matrix;
+	FbxAMatrix lM;
+	FbxVector4 pTranslation, pRotation, pShearing, pScaling;
+	FbxQuaternion lQ1, lQ2, lQ3, lQ4;
+	double pSign;
+	int index;
+	bool isLocalMatrix = false;
 
+	// Translate the face
+	//index = lPose->Find("head");
+	//lPose->Remove(index);
+	index = 3;
+	node = lPose->GetNode(index);
+	matrix = lPose->GetMatrix(index);
+	isLocalMatrix = lPose->IsLocalMatrix(index);
+
+	matrix.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	matrix.SetTRS(pTranslation + T, pRotation + R, pScaling + S);
+	lPose->Remove(index);
+	lPose->Add(node, matrix, isLocalMatrix);
+	//FbxVector4 pR2 = pRotation;
+
+	// Translate the jaw as well, as it is not well linked
+	index = lPose->Find("jaw");
+	node = lPose->GetNode(index);
+	matrix = lPose->GetMatrix(index);
+	isLocalMatrix = lPose->IsLocalMatrix(index);
+
+	matrix.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+
+	lM.SetR(pRotation);
+	lQ1.SetAxisAngle(FbxVector4(1, 0, 0), -R[1]*2.5);
+	lQ2.SetAxisAngle(FbxVector4(0, 1, 0), R[0]*2.5);
+	lQ3.SetAxisAngle(FbxVector4(0, 0, 1), R[2]*1.8);
+	lQ4 = lM.GetQ();
+
+	matrix.SetTQS(pTranslation + T*1.8, lQ1*lQ2*lQ3*lQ4, pScaling + S);
+	lPose->Remove(index);
+	lPose->Add(node, matrix, !isLocalMatrix);
+
+	//index = lPose->Find("jawEnd");
+	//node = lPose->GetNode(index);
+	//matrix = lPose->GetMatrix(index);
+	//isLocalMatrix = lPose->IsLocalMatrix(index);
+
+	//matrix.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	//matrix.SetTRS(pTranslation + T*2.5, pR2, pScaling + S);
+	//lPose->Remove(index);
+	//lPose->Add(node, matrix, isLocalMatrix);
+
+//	matrix.SetTRS(T, R, FbxVector4(1, 1, 1, 1) + S);
+	matrix.SetTRS(T, R, S);
+	node = lScene->FindNodeByName("gums");
+	lPose->Add(node, matrix, isLocalMatrix);
+//	matrix.SetTRS(T, R, FbxVector4(1, 1, 1, 1) + S);
+	node = lScene->FindNodeByName("upperTeeth");
+	lPose->Add(node, matrix, isLocalMatrix);
+	node = lScene->FindNodeByName("lowerTeeth");
+	lPose->Add(node, matrix, isLocalMatrix);
+	node = lScene->FindNodeByName("leftEye");
+	lPose->Add(node, matrix, isLocalMatrix);
+	node = lScene->FindNodeByName("rightEye");
+	lPose->Add(node, matrix, isLocalMatrix);
+	node = lScene->FindNodeByName("tongueRoot");
+	lPose->Add(node, matrix, isLocalMatrix);
+	node = lScene->FindNodeByName("tongueMid");
+	lPose->Add(node, matrix, isLocalMatrix);
+	node = lScene->FindNodeByName("tongueTip");
+	lPose->Add(node, matrix, isLocalMatrix);
+	node = lScene->FindNodeByName("tongueEnd");
+	lPose->Add(node, matrix, isLocalMatrix);
+
+	//matrix.SetTRS(T, R, FbxVector4(1, 1, 1, 1) + S);
+	//node = lScene->FindNodeByName("neckControl");
+	//lPose->Add(node, matrix, isLocalMatrix);
+}
+
+
+void Model::update() {
+	//int neckIndex = lPose->Find("neck");
+	//FbxNode * neckNode = lPose->GetNode(neckIndex);
+	//FbxMatrix neck = lPose->GetMatrix(neckIndex);
+	//bool isLocalMatrix = lPose->IsLocalMatrix(neckIndex);
+	//FbxVector4 pTranslation, pRotation, pShearing, pScaling;
+	//double pSign;
+	//neck.GetElements(pTranslation,pRotation,pShearing,pScaling,pSign);
+	//double x = pRotation[0] * sin(pRotation[2]) * cos(pRotation[1]);
+	//double y = pRotation[0] * sin(pRotation[2]) * sin(pRotation[1]);
+	//double z = pRotation[0] * cos(pRotation[2]);
+
+	//std::cout << pRotation[0] << " " << pRotation[1] << " " << pRotation[2] << " " << pRotation[3] << std::endl;
+	////FbxVector4(sqrt(x*x + y*y + z*z), atan(y/z), acos(z/sqrt(x*x + y*y + z*z)), pRotation[3])
+	//neck.SetTRS(pTranslation, pRotation + FbxVector4(0,5,0,0), pScaling);
+
+	//lPose->Remove(neckIndex);
+	//lPose->Add(neckNode, neck, isLocalMatrix);
+
+	FbxAMatrix lDummyGlobalPosition;
+
+	if (doShocked && shocked < 99.9) shocked += 0.1;
+	else if (!doShocked && shocked > 0.1) shocked -= 0.1;
+
+	// Reset the vertices array
+	vertices.clear();
+
+	// HERERERERERERERERERE
+	mCurrentTime += mFrameTime;
+
+	if (mCurrentTime > mStop)
+	{
+		mCurrentTime = mStart;
+	}
+
+	std::vector<double> weights;
+	weights.push_back(shocked);
+	DrawNodeRecursive(lScene->GetRootNode(), mCurrentTime, mCurrentAnimLayer, lDummyGlobalPosition, lPose, getVerticesArray(), &weights);
+	//DisplayGrid(lDummyGlobalPosition);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_triangles);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
 }
 
 void Model::render() {
@@ -390,7 +569,7 @@ void Model::render() {
 		(void*)0                          // array buffer offset
 	);
 
-	glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+	glDrawArrays(GL_TRIANGLES, 0, (GLsizei) vertices.size());
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);

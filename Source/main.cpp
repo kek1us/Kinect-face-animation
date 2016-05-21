@@ -23,6 +23,7 @@ bool init() {
 
 	// Enable depth test
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 
 	// Accept fragment if it closer to the camera than the former one
 	//glDepthFunc(GL_LEQUAL);
@@ -81,6 +82,8 @@ int main() {
 						case sf::Keyboard::P: K.playRecord(); break;
 						case sf::Keyboard::R: K.record(); break;
 						case sf::Keyboard::S: K.stopRecord(); break;
+						case sf::Keyboard::Z: M.setShocked(); break;
+						case sf::Keyboard::X: M.undoShocked(); break;
 						case sf::Keyboard::Escape: window.close(); break;
 						default: break;
 					}
@@ -95,6 +98,7 @@ int main() {
 			window.setActive();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			if (KinectOn) K.update();
+			M.update();
 			K.render();
 			M.render();
 			window.display();

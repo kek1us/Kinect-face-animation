@@ -240,3 +240,10 @@ HRESULT VisualizeFaceModel(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONF
 	return hr;
 }
 
+void printFBX(FbxVector4* vector) {
+	for (int i = 0; i < 3; ++i) {
+		std::cout << (float) vector->mData[i] << " ";
+	}
+	std::cout << std::endl;
+}
+
