@@ -77,10 +77,6 @@ bool Model::loadFBX(std::string filename) {
 	FbxNode* lNode = lScene->GetRootNode();
 	this->getFBXData(lNode);
 
-	// Display hierarchy
-	FBXSDK_printf("\n\n---------\nHierarchy\n---------\n\n");
-	DisplayHierarchy(lNode, 0);
-
 	////////////////////////// HURR DURR
 	// Convert mesh, NURBS and patch into triangle mesh
 	//FbxGeometryConverter lGeomConverter(lSdkManager);
@@ -139,6 +135,10 @@ bool Model::loadFBX(std::string filename) {
 
 	/////////////////////////
 
+	// Display hierarchy
+	FBXSDK_printf("\n\n---------\nHierarchy\n---------\n\n");
+	DisplayHierarchy(lNode, 0);
+
 	if (lResult) FBXSDK_printf("THERE WE GO, BOIS!\n");
 
 	return lResult;
@@ -151,7 +151,10 @@ void Model::getFBXData(FbxNode* node) {
 		FbxNode* childNode = node->GetChild(i);
 		FbxMesh* mesh = childNode->GetMesh();
 
-		if (mesh != NULL) {
+		if (mesh != NULL && childNode->GetName() != (std::string)"upperTeeth" && childNode->GetName() != (std::string)"lowerTeeth" 
+			&& childNode->GetName() != (std::string)"leftEye" && childNode->GetName() != (std::string)"rightEye" && 
+			childNode->GetName() != (std::string)"gums") {
+			std::cout << "WTF: " << childNode->GetName() << std::endl;
 			// Get control points (=vertices for a mesh)
 			FbxVector4* fbxControlPoints = mesh->GetControlPoints();
 
@@ -255,11 +258,11 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	//lPose->Remove(index);
 	//lPose->Add(node, matrix2, isLocalMatrix);
 
-	modifyMatrix("jaw", T + FbxVector4(0,5,0,1), R, S);
-	//modifyMatrix("jawEnd", T*1.8, R, S);
+	//modifyMatrix("jaw", T*1.8, R, S);
+	modifyMatrix("gums", T*1.8, R, S);
 	//modifyMatrix("headTop", T*1.8, R, S);
 	//modifyMatrix("Boris_Grp", T*1.8, R, S);
-	//modifyMatrix("neck", T*1.8, -R, S);
+	//modifyMatrix("neck", T*1.8, R, S);
 	//modifyMatrix("leftEye", T*1.8, FbxVector4(R[1], R[0], R[2], R[3]), S);
 	//modifyMatrix("rightEye", T*1.8, FbxVector4(R[1], R[0], R[2], R[3]), S);
 }

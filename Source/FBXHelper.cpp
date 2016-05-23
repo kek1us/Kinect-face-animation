@@ -163,6 +163,22 @@ void DisplayHierarchy(FbxNode* pNode, int pDepth)
 	}
 
 	lString += pNode->GetName();
+	lString += " "; 
+	FbxNodeAttribute* lNodeAttribute = pNode->GetNodeAttribute();
+	if (lNodeAttribute) {
+		switch (lNodeAttribute->GetAttributeType())
+		{
+			case FbxNodeAttribute::eMarker: lString += "Marker"; break;
+			case FbxNodeAttribute::eMesh: lString += "Mesh"; break;
+			case FbxNodeAttribute::eSkeleton:lString += "Skeleton"; break;
+			case FbxNodeAttribute::eCamera: lString += "Camera"; break;
+			case FbxNodeAttribute::eNull: lString += "Null"; break;
+			case FbxNodeAttribute::eNurbs: lString += "Nurbs"; break;
+			case FbxNodeAttribute::eNurbsCurve: lString += "Nurbs Curve"; break;
+			case FbxNodeAttribute::eNurbsSurface: lString += "Nurbs Surface"; break;
+			default: lString += "Unknown type"; break;
+		}
+	} else lString += "Null";
 	lString += "\n";
 
 	FBXSDK_printf(lString.Buffer());
@@ -422,7 +438,11 @@ void DrawNode(FbxNode* pNode,
 		// NURBS and patch have been converted into triangluation meshes.
 		else if (lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eMesh)
 		{
-			DrawMesh(pNode, pTime, pAnimLayer, pGlobalPosition, pPose, vertices, weights);
+			if (pNode->GetName() != (std::string)"upperTeeth" && pNode->GetName() != (std::string)"lowerTeeth"
+				&& pNode->GetName() != (std::string)"leftEye" && pNode->GetName() != (std::string)"rightEye" &&
+				pNode->GetName() != (std::string)"gums") {
+				DrawMesh(pNode, pTime, pAnimLayer, pGlobalPosition, pPose, vertices, weights);
+			}
 		}
 		else if (lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eCamera)
 		{
@@ -752,54 +772,57 @@ void ComputeLinearDeformation(FbxAMatrix& pGlobalPosition,
 		FbxSkin * lSkinDeformer = (FbxSkin *)pMesh->GetDeformer(lSkinIndex, FbxDeformer::eSkin);
 
 		int lClusterCount = lSkinDeformer->GetClusterCount();
-		for (int lClusterIndex = 0; lClusterIndex<lClusterCount; ++lClusterIndex)
+		for (int lClusterIndex = 0; lClusterIndex < lClusterCount; ++lClusterIndex)
 		{
 			FbxCluster* lCluster = lSkinDeformer->GetCluster(lClusterIndex);
 			if (!lCluster->GetLink())
 				continue;
 
-			FbxAMatrix lVertexTransformMatrix;
-			ComputeClusterDeformation(pGlobalPosition, pMesh, lCluster, lVertexTransformMatrix, pTime, pPose);
+			//if (lCluster->GetName() != "neck" && lCluster->GetName() != "jaw" && lCluster->GetName() != "jawEnd") {
+			if (true) {
+				FbxAMatrix lVertexTransformMatrix;
+				ComputeClusterDeformation(pGlobalPosition, pMesh, lCluster, lVertexTransformMatrix, pTime, pPose);
 
-			int lVertexIndexCount = lCluster->GetControlPointIndicesCount();
-			for (int k = 0; k < lVertexIndexCount; ++k)
-			{
-				int lIndex = lCluster->GetControlPointIndices()[k];
-
-				// Sometimes, the mesh can have less points than at the time of the skinning
-				// because a smooth operator was active when skinning but has been deactivated during export.
-				if (lIndex >= lVertexCount)
-					continue;
-
-				double lWeight = lCluster->GetControlPointWeights()[k];
-
-				if (lWeight == 0.0)
+				int lVertexIndexCount = lCluster->GetControlPointIndicesCount();
+				for (int k = 0; k < lVertexIndexCount; ++k)
 				{
-					continue;
-				}
+					int lIndex = lCluster->GetControlPointIndices()[k];
 
-				// Compute the influence of the link on the vertex.
-				FbxAMatrix lInfluence = lVertexTransformMatrix;
-				MatrixScale(lInfluence, lWeight);
+					// Sometimes, the mesh can have less points than at the time of the skinning
+					// because a smooth operator was active when skinning but has been deactivated during export.
+					if (lIndex >= lVertexCount)
+						continue;
 
-				if (lClusterMode == FbxCluster::eAdditive)
-				{
-					// Multiply with the product of the deformations on the vertex.
-					MatrixAddToDiagonal(lInfluence, 1.0 - lWeight);
-					lClusterDeformation[lIndex] = lInfluence * lClusterDeformation[lIndex];
+					double lWeight = lCluster->GetControlPointWeights()[k];
 
-					// Set the link to 1.0 just to know this vertex is influenced by a link.
-					lClusterWeight[lIndex] = 1.0;
-				}
-				else // lLinkMode == FbxCluster::eNormalize || lLinkMode == FbxCluster::eTotalOne
-				{
-					// Add to the sum of the deformations on the vertex.
-					MatrixAdd(lClusterDeformation[lIndex], lInfluence);
+					if (lWeight == 0.0)
+					{
+						continue;
+					}
 
-					// Add to the sum of weights to either normalize or complete the vertex.
-					lClusterWeight[lIndex] += lWeight;
-				}
-			}//For each vertex			
+					// Compute the influence of the link on the vertex.
+					FbxAMatrix lInfluence = lVertexTransformMatrix;
+					MatrixScale(lInfluence, lWeight);
+
+					if (lClusterMode == FbxCluster::eAdditive)
+					{
+						// Multiply with the product of the deformations on the vertex.
+						MatrixAddToDiagonal(lInfluence, 1.0 - lWeight);
+						lClusterDeformation[lIndex] = lInfluence * lClusterDeformation[lIndex];
+
+						// Set the link to 1.0 just to know this vertex is influenced by a link.
+						lClusterWeight[lIndex] = 1.0;
+					}
+					else // lLinkMode == FbxCluster::eNormalize || lLinkMode == FbxCluster::eTotalOne
+					{
+						// Add to the sum of the deformations on the vertex.
+						MatrixAdd(lClusterDeformation[lIndex], lInfluence);
+
+						// Add to the sum of weights to either normalize or complete the vertex.
+						lClusterWeight[lIndex] += lWeight;
+					}
+				}//For each vertex	
+			}
 		}//lClusterCount
 	}
 
