@@ -126,6 +126,8 @@ bool Kinect::initFaceTrack() {
 	isTracked = false;
 	SetCenterOfImage(NULL);
 
+	scale = 0.0f;
+
 	return true;
 }
 
@@ -229,7 +231,7 @@ void Kinect::update() {
 
 	// Do something with pFTResult.
 	if (isTracked) {
-		std::cout << "DETECTS FACE" << std::endl;
+		//std::cout << "DETECTS FACE" << std::endl;
 		FLOAT* pSU = NULL;
 		UINT numSU;
 		BOOL suConverged;
@@ -242,13 +244,13 @@ void Kinect::update() {
 		HRESULT hr = pFT->GetFaceModel(&ftModel);
 		if (SUCCEEDED(hr))
 		{
+			HRESULT hrRes = pFTResult->Get3DPose(&scale, rotation, translation);
+
 			hr = VisualizeFaceModel(pColorFrame, ftModel, &cameraConfig, pSU, 1.0, viewOffset, pFTResult, 0x00FFFF00);
 			
 			// Register the results
-			FLOAT* pScale;
-			FLOAT* rot;
-			FLOAT* trans;
-			pFTResult->Get3DPose(pScale, rot, trans);
+			if (SUCCEEDED(hrRes)) std::cout << rotation[0] << " " << rotation[1] << " " << rotation[2] << std::endl;
+			else std::cout << "Couldn't get the 3D pose of the Face Model" << std::endl;
 			
 
 			if (isRecording) {

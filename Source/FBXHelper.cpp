@@ -644,7 +644,7 @@ void ComputeShapeDeformation(FbxMesh* pMesh, FbxTime& pTime, FbxAnimLayer* pAnim
 					// Calculate the real weight.
 					lWeight = (lWeight / lEndWeight) * 100;
 					// Initialize the lDstVertexArray with vertex of base geometry.
-					memcpy(lDstVertexArray, lSrcVertexArray, lVertexCount * sizeof(FbxVector4));
+					//memcpy(lDstVertexArray, lSrcVertexArray, lVertexCount * sizeof(FbxVector4));
 					for (int j = 0; j < lVertexCount; j++)
 					{
 						// Add the influence of the shape vertex to the mesh vertex.
@@ -1067,7 +1067,11 @@ void MatrixAdd(FbxAMatrix& pDstMatrix, FbxAMatrix& pSrcMatrix)
 double evaluateChannel(std::vector<double>* weights, FbxString name) {
 	double weight = 0;
 
-	if (name == "mouthEyes_Blend.smile") {
+	if (name == "mouthEyes_Blend.shocked") {
+		weight = weights->at(0);
+		//std::cout << name << ": " << weight << std::endl;
+	}
+	else if (name == "mouthEyes_Blend.smile") {
 		weight = weights->at(0);
 		//std::cout << name << ": " << weight << std::endl;
 	}

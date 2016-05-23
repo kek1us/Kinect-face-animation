@@ -29,9 +29,10 @@ public:
 	HRESULT GetDepthConfiguration(FT_CAMERA_CONFIG* depthConfig);
 	void SetCenterOfImage(IFTResult* pResult);
 
-	FLOAT* GetScale() { return scale; };
+	FLOAT* GetScale() { return &scale; };
 	FLOAT* GetRotation() { return rotation; };
 	FLOAT* GetTranslation() { return translation; };
+	bool IsTracked() { return isTracked; };
 
 private:
 
@@ -63,7 +64,7 @@ private:
 	float       m_YCenterFace;
 
 	// Face Tracking results
-	FLOAT* scale;
-	FLOAT* rotation;
-	FLOAT* translation;
+	FLOAT scale;
+	FLOAT rotation[3];
+	FLOAT translation[3];
 };

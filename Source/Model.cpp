@@ -63,131 +63,6 @@ bool Model::initVBO() {
 	return true;
 }
 
-bool Model::loadModel(std::string filename) {
-	std::vector< unsigned int > vertexIndices, uvIndices, normalIndices, vertexIndices_triangles, uvIndices_triangles, normalIndices_triangles;
-	std::vector< glm::vec3 > temp_vertices;
-	std::vector< glm::vec2 > temp_uvs;
-	std::vector< glm::vec3 > temp_normals;
-
-	FILE * file = fopen(filename.c_str(), "r");
-	std::cout << filename.c_str() << std::endl;
-	if (file == NULL) {
-		std::cout << "Impossible to open the file!" << std::endl;
-		return false;
-	}
-
-	char lineHeader[128];
-	fpos_t position;
-	// read the first word of the line
-	int res = fscanf(file, "%s", lineHeader);
-	while (1) {
-		int matches;
-		if (res == EOF) {
-			break; // EOF = End Of File. Quit the loop.
-		}
-		else if (lineHeader == std::string("v")) {
-			glm::vec3 vertex;
-			matches = fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z);
-			temp_vertices.push_back(vertex);
-		}
-		else if (lineHeader == std::string("vt")) {
-			glm::vec2 uv;
-			matches = fscanf(file, "%f %f\n", &uv.x, &uv.y);
-			temp_uvs.push_back(uv);
-		}
-		else if (lineHeader == std::string("vn")) {
-			glm::vec3 normal;
-			matches = fscanf(file, "%f %f %f\n", &normal.x, &normal.y, &normal.z);
-			temp_normals.push_back(normal);
-		}
-		else if (lineHeader == std::string("f")) {
-			fgetpos(file, &position);
-
-			std::string vertex1, vertex2, vertex3;
-			unsigned int vertexIndex[4], uvIndex[4], normalIndex[4];
-			matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2], &vertexIndex[3], &uvIndex[3], &normalIndex[3]);
-
-			if (matches == 1) {
-				fsetpos(file, &position);
-				matches = fscanf(file, "%d//%d %d//%d %d//%d %d//%d\n", &vertexIndex[0], &normalIndex[0], &vertexIndex[1], &normalIndex[1], &vertexIndex[2], &normalIndex[2], &vertexIndex[3], &normalIndex[3]);
-				uvIndex[0] = 1;
-				uvIndex[1] = 1;
-				uvIndex[2] = 1;
-				uvIndex[3] = 1;
-			}
-
-			if (matches != 12 && matches != 9 && matches != 8 && matches != 6) {
-				printf("File can't be read by our simple parser : ( Try exporting with other options, %d\n", matches);
-				return false;
-			}
-			if (matches == 12 || matches == 8) {
-				vertexIndices.push_back(vertexIndex[0]);
-				vertexIndices.push_back(vertexIndex[1]);
-				vertexIndices.push_back(vertexIndex[2]);
-				vertexIndices.push_back(vertexIndex[3]);
-				uvIndices.push_back(uvIndex[0]);
-				uvIndices.push_back(uvIndex[1]);
-				uvIndices.push_back(uvIndex[2]);
-				uvIndices.push_back(uvIndex[3]);
-				normalIndices.push_back(normalIndex[0]);
-				normalIndices.push_back(normalIndex[1]);
-				normalIndices.push_back(normalIndex[2]);
-				normalIndices.push_back(normalIndex[3]);
-			}
-			else {
-				vertexIndices_triangles.push_back(vertexIndex[0]);
-				vertexIndices_triangles.push_back(vertexIndex[1]);
-				vertexIndices_triangles.push_back(vertexIndex[2]);
-				uvIndices_triangles.push_back(uvIndex[0]);
-				uvIndices_triangles.push_back(uvIndex[1]);
-				uvIndices_triangles.push_back(uvIndex[2]);
-				normalIndices_triangles.push_back(normalIndex[0]);
-				normalIndices_triangles.push_back(normalIndex[1]);
-				normalIndices_triangles.push_back(normalIndex[2]);
-			}
-
-		}
-		res = fscanf(file, "%s", lineHeader);
-	}
-
-	for (unsigned int i = 0; i<vertexIndices.size(); i++) {
-		unsigned int vertexIndex = vertexIndices[i];
-		glm::vec3 vertex = temp_vertices[vertexIndex - 1];
-		vertices_quads.push_back(vertex);
-	}
-
-	for (unsigned int i = 0; i<uvIndices.size(); i++) {
-		unsigned int uvIndex = uvIndices[i];
-		glm::vec2 uv = temp_uvs[uvIndex - 1];
-		uvs_quads.push_back(uv);
-	}
-
-	for (unsigned int i = 0; i<normalIndices.size(); i++) {
-		unsigned int normalIndex = normalIndices[i];
-		glm::vec3 normal = temp_normals[normalIndex - 1];
-		normals_quads.push_back(normal);
-	}
-
-	for (unsigned int i = 0; i<vertexIndices_triangles.size(); i++) {
-		unsigned int vertexIndex = vertexIndices_triangles[i];
-		glm::vec3 vertex = temp_vertices[vertexIndex - 1];
-		vertices_triangles.push_back(vertex);
-	}
-
-	for (unsigned int i = 0; i<uvIndices_triangles.size(); i++) {
-		unsigned int uvIndex = uvIndices_triangles[i];
-		glm::vec2 uv = temp_uvs[uvIndex - 1];
-		uvs_triangles.push_back(uv);
-	}
-
-	for (unsigned int i = 0; i<normalIndices_triangles.size(); i++) {
-		unsigned int normalIndex = normalIndices_triangles[i];
-		glm::vec3 normal = temp_normals[normalIndex - 1];
-		normals_triangles.push_back(normal);
-	}
-	return true;
-}
-
 bool Model::loadFBX(std::string filename) {
 	bool lResult = true;
 
@@ -208,8 +83,8 @@ bool Model::loadFBX(std::string filename) {
 
 	////////////////////////// HURR DURR
 	// Convert mesh, NURBS and patch into triangle mesh
-	FbxGeometryConverter lGeomConverter(lSdkManager);
-	lGeomConverter.Triangulate(lScene, /*replace*/true);
+	//FbxGeometryConverter lGeomConverter(lSdkManager);
+	//lGeomConverter.Triangulate(lScene, /*replace*/true);
 
 	FbxArray<FbxString*> mAnimStackNameArray;
 	lScene->FillAnimStackNameArray(mAnimStackNameArray);
@@ -256,16 +131,11 @@ bool Model::loadFBX(std::string filename) {
 	shocked = 0;
 	doShocked = true;
 	newResult = false;
-	lScale = NULL;
-	lRotation = NULL;
-	lTranslation = NULL;
 
 	// Get the pose to work with
 	lPose = lScene->GetPose(0);
 
-	//for (int i = 0; i < lPose->GetCount(); ++i) {
-	//	std::cout << lPose->GetNodeName(i).GetInitialName() << std::endl;
-	//}
+	setDefaultPose();
 
 	/////////////////////////
 
@@ -325,9 +195,27 @@ void Model::getFBXData(FbxNode* node) {
 	}
 }
 
+void Model::setDefaultPose() {
+	// Index of the head matrix is 3, because of how the model is built
+	int index = 3;
+	matrixHead = lPose->GetMatrix(index);
+	
+	// In the case of the jaw, we just look for its index in the pose
+	matrixJaw = lPose->GetMatrix(lPose->Find("jaw"));
+	matrixJawEnd = lPose->GetMatrix(lPose->Find("jawEnd"));
+	matrixNeck = lPose->GetMatrix(lPose->Find("neck"));
+	matrixGrp = lPose->GetMatrix(lPose->Find("Boris_Grp"));
+	matrixHeadTop = lPose->GetMatrix(lPose->Find("headTop"));
+	//matrixLeftEye = lPose->GetMatrix(lPose->Find("leftEye"));
+	//matrixRightEye = lPose->GetMatrix(lPose->Find("rightEye"));
+	
+	//modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(8, 18, -3, 1), FbxVector4(1, 1, 1, 0));
+	//modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(5, 4, -10, 1), FbxVector4(0, 0, 0, 0));
+}
+
 void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	FbxNode * node;
-	FbxMatrix matrix;
+	FbxMatrix matrix, matrix2;
 	FbxAMatrix lM;
 	FbxVector4 pTranslation, pRotation, pShearing, pScaling;
 	FbxQuaternion lQ1, lQ2, lQ3, lQ4;
@@ -338,70 +226,67 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	// Translate the face
 	//index = lPose->Find("head");
 	//lPose->Remove(index);
-	index = 3;
+	index = lPose->Find("head");
 	node = lPose->GetNode(index);
 	matrix = lPose->GetMatrix(index);
 	isLocalMatrix = lPose->IsLocalMatrix(index);
 
-	matrix.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	matrix.SetTRS(pTranslation + T, pRotation + R, pScaling + S);
+	matrixHead.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	matrix.SetTRS(pTranslation + T, pRotation + R, pScaling*S);
 	lPose->Remove(index);
 	lPose->Add(node, matrix, isLocalMatrix);
-	//FbxVector4 pR2 = pRotation;
 
-	// Translate the jaw as well, as it is not well linked
-	index = lPose->Find("jaw");
-	node = lPose->GetNode(index);
-	matrix = lPose->GetMatrix(index);
-	isLocalMatrix = lPose->IsLocalMatrix(index);
-
-	matrix.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-
-	lM.SetR(pRotation);
-	lQ1.SetAxisAngle(FbxVector4(1, 0, 0), -R[1]*2.5);
-	lQ2.SetAxisAngle(FbxVector4(0, 1, 0), R[0]*2.5);
-	lQ3.SetAxisAngle(FbxVector4(0, 0, 1), R[2]*1.8);
-	lQ4 = lM.GetQ();
-
-	matrix.SetTQS(pTranslation + T*1.8, lQ1*lQ2*lQ3*lQ4, pScaling + S);
-	lPose->Remove(index);
-	lPose->Add(node, matrix, !isLocalMatrix);
-
-	//index = lPose->Find("jawEnd");
+	//// Translate the jaw as well, as it is not well linked
+	//index = lPose->Find("jaw");
 	//node = lPose->GetNode(index);
-	//matrix = lPose->GetMatrix(index);
+	//matrix2 = lPose->GetMatrix(index);
 	//isLocalMatrix = lPose->IsLocalMatrix(index);
 
-	//matrix.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	//matrix.SetTRS(pTranslation + T*2.5, pR2, pScaling + S);
+	//matrixJaw.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+
+	//lM.SetR(pRotation);
+	//lQ1.SetAxisAngle(FbxVector4(1, 0, 0), -R[1] * 2.5);
+	//lQ2.SetAxisAngle(FbxVector4(0, 1, 0), R[0] * 2.5);
+	//lQ3.SetAxisAngle(FbxVector4(0, 0, 1), R[2]*1.8);
+	//lQ4 = lM.GetQ();
+
+	//matrix2.SetTRS(pTranslation + T*1.8, pRotation + FbxVector4(-R[1], R[0], R[2], R[3]), pScaling*S);
+	////matrix2.SetTRS(pTranslation + T*1.8, pRotation + FbxVector4(0, 0, 0, 1), pScaling*S);
 	//lPose->Remove(index);
-	//lPose->Add(node, matrix, isLocalMatrix);
+	//lPose->Add(node, matrix2, isLocalMatrix);
 
-//	matrix.SetTRS(T, R, FbxVector4(1, 1, 1, 1) + S);
-	matrix.SetTRS(T, R, S);
-	node = lScene->FindNodeByName("gums");
-	lPose->Add(node, matrix, isLocalMatrix);
-//	matrix.SetTRS(T, R, FbxVector4(1, 1, 1, 1) + S);
-	node = lScene->FindNodeByName("upperTeeth");
-	lPose->Add(node, matrix, isLocalMatrix);
-	node = lScene->FindNodeByName("lowerTeeth");
-	lPose->Add(node, matrix, isLocalMatrix);
-	node = lScene->FindNodeByName("leftEye");
-	lPose->Add(node, matrix, isLocalMatrix);
-	node = lScene->FindNodeByName("rightEye");
-	lPose->Add(node, matrix, isLocalMatrix);
-	node = lScene->FindNodeByName("tongueRoot");
-	lPose->Add(node, matrix, isLocalMatrix);
-	node = lScene->FindNodeByName("tongueMid");
-	lPose->Add(node, matrix, isLocalMatrix);
-	node = lScene->FindNodeByName("tongueTip");
-	lPose->Add(node, matrix, isLocalMatrix);
-	node = lScene->FindNodeByName("tongueEnd");
-	lPose->Add(node, matrix, isLocalMatrix);
+	modifyMatrix("jaw", T + FbxVector4(0,5,0,1), R, S);
+	//modifyMatrix("jawEnd", T*1.8, R, S);
+	//modifyMatrix("headTop", T*1.8, R, S);
+	//modifyMatrix("Boris_Grp", T*1.8, R, S);
+	//modifyMatrix("neck", T*1.8, -R, S);
+	//modifyMatrix("leftEye", T*1.8, FbxVector4(R[1], R[0], R[2], R[3]), S);
+	//modifyMatrix("rightEye", T*1.8, FbxVector4(R[1], R[0], R[2], R[3]), S);
+}
 
-	//matrix.SetTRS(T, R, FbxVector4(1, 1, 1, 1) + S);
-	//node = lScene->FindNodeByName("neckControl");
-	//lPose->Add(node, matrix, isLocalMatrix);
+void Model::modifyMatrix(FbxNameHandler name, FbxVector4 T, FbxVector4 R, FbxVector4 S) {
+	FbxNode * node;
+	FbxMatrix matrix;
+	FbxVector4 pTranslation, pRotation, pShearing, pScaling;
+	double pSign;
+	bool isLocalMatrix = false;
+	int index = lPose->Find(name);
+	node = lPose->GetNode(index);
+	matrix = lPose->GetMatrix(index);
+	isLocalMatrix = lPose->IsLocalMatrix(index);
+
+	if (name.GetInitialName() == "head") matrixHead.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == "jaw") matrixJaw.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == "jawEnd") matrixJawEnd.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == "neck") matrixNeck.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == "Boris_Grp") matrixGrp.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == "headTop") matrixHeadTop.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	//else if (name.GetInitialName() == "leftEye") matrixLeftEye.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	//else if (name.GetInitialName() == "rightEye") matrixRightEye.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	
+	matrix.SetTRS(pTranslation + T, pRotation + R, pScaling * S);
+	lPose->Remove(index);
+	lPose->Add(node, matrix, isLocalMatrix);
 }
 
 void Model::registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation) {
@@ -413,33 +298,18 @@ void Model::registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation) {
 
 
 void Model::update() {
-	//int neckIndex = lPose->Find("neck");
-	//FbxNode * neckNode = lPose->GetNode(neckIndex);
-	//FbxMatrix neck = lPose->GetMatrix(neckIndex);
-	//bool isLocalMatrix = lPose->IsLocalMatrix(neckIndex);
-	//FbxVector4 pTranslation, pRotation, pShearing, pScaling;
-	//double pSign;
-	//neck.GetElements(pTranslation,pRotation,pShearing,pScaling,pSign);
-	//double x = pRotation[0] * sin(pRotation[2]) * cos(pRotation[1]);
-	//double y = pRotation[0] * sin(pRotation[2]) * sin(pRotation[1]);
-	//double z = pRotation[0] * cos(pRotation[2]);
-
-	//std::cout << pRotation[0] << " " << pRotation[1] << " " << pRotation[2] << " " << pRotation[3] << std::endl;
-	////FbxVector4(sqrt(x*x + y*y + z*z), atan(y/z), acos(z/sqrt(x*x + y*y + z*z)), pRotation[3])
-	//neck.SetTRS(pTranslation, pRotation + FbxVector4(0,5,0,0), pScaling);
-
-	//lPose->Remove(neckIndex);
-	//lPose->Add(neckNode, neck, isLocalMatrix);
-
 	FbxAMatrix lDummyGlobalPosition;
 
 	if (newResult) {
-		modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4((double)lRotation[0], (double)lRotation[1], (double)lRotation[2], 1), FbxVector4(0, 0, 0, 0));
+		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4(-lRotation[1], lRotation[0], lRotation[2], 0), FbxVector4(1, 1, 1, 0));
 		newResult = false;
+	} else if (stopAnim) {
+		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4(0, 0, 0, 1), FbxVector4(1, 1, 1, 0));
+		stopAnim = false;
 	}
 
-	if (doShocked && shocked < 99.9) shocked += 0.1;
-	else if (!doShocked && shocked > 0.1) shocked -= 0.1;
+	if (doShocked && shocked < 99.9) shocked += 0.5;
+	else if (!doShocked && shocked > 0.1) shocked -= 0.5;
 
 	// Reset the vertices array
 	vertices.clear();

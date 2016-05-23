@@ -97,7 +97,16 @@ int main() {
 		if (elapsed.asSeconds() > 1.0 / 60) { // 60 fps = 1.0/60
 			window.setActive();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			if (KinectOn) K.update();
+			if (KinectOn) {
+				K.update();
+				if (K.IsTracked()) {
+					FLOAT* sc = K.GetScale();
+					FLOAT* rot = K.GetRotation();
+					FLOAT* trans = K.GetTranslation();
+					M.registerResult(sc, rot, trans);
+				}
+				else M.stopAnimation();
+			}
 			M.update();
 			K.render();
 			M.render();

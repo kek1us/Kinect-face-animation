@@ -12,21 +12,23 @@ public:
 
 	bool init();
 	bool initVBO();
-	bool loadModel(std::string filename);
 	bool loadFBX(std::string filename);
 	void getFBXData(FbxNode* node);
 	void update();
 	void render();
 
-	std::vector<glm::vec3>* getVerticesArray() { return &vertices; }
-	std::vector<glm::vec3>* getNormalsArray() { return &normals; }
-	std::vector<glm::vec2>* getUVsArray() { return &uvs; }
+	std::vector<glm::vec3>* getVerticesArray() { return &vertices; };
+	std::vector<glm::vec3>* getNormalsArray() { return &normals; };
+	std::vector<glm::vec2>* getUVsArray() { return &uvs; };
 
 	// PLACEHOLDER
-	void setShocked() { doShocked = true; }
-	void undoShocked() { doShocked = false; }
+	void setShocked() { doShocked = true; };
+	void undoShocked() { doShocked = false; };
+	void setDefaultPose();
 	void modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S);
+	void modifyMatrix(FbxNameHandler name, FbxVector4 T, FbxVector4 R, FbxVector4 S);
 	void registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation);
+	void stopAnimation() { stopAnim = true; };
 
 private:
 
@@ -72,6 +74,15 @@ private:
 	double shocked;
 	bool doShocked;
 	bool newResult;
+	bool stopAnim;
+	FbxMatrix matrixHead;
+	FbxMatrix matrixJaw;
+	FbxMatrix matrixJawEnd;
+	FbxMatrix matrixNeck;
+	FbxMatrix matrixGrp;
+	FbxMatrix matrixHeadTop;
+	//FbxMatrix matrixLeftEye;
+	//FbxMatrix matrixRightEye;
 
 	// RESULTSHOLDER
 	FLOAT lScale;
