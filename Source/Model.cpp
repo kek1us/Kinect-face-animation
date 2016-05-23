@@ -255,15 +255,17 @@ bool Model::loadFBX(std::string filename) {
 
 	shocked = 0;
 	doShocked = true;
+	newResult = false;
+	lScale = NULL;
+	lRotation = NULL;
+	lTranslation = NULL;
 
 	// Get the pose to work with
 	lPose = lScene->GetPose(0);
 
-	modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(0, 0, 0, 1), FbxVector4(0, 0, 0, 0));
-
-	for (int i = 0; i < lPose->GetCount(); ++i) {
-		std::cout << lPose->GetNodeName(i).GetInitialName() << std::endl;
-	}
+	//for (int i = 0; i < lPose->GetCount(); ++i) {
+	//	std::cout << lPose->GetNodeName(i).GetInitialName() << std::endl;
+	//}
 
 	/////////////////////////
 
@@ -402,6 +404,13 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	//lPose->Add(node, matrix, isLocalMatrix);
 }
 
+void Model::registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation) {
+	lScale = *scale;
+	lRotation = rotation;
+	lTranslation = translation;
+	newResult = true;
+}
+
 
 void Model::update() {
 	//int neckIndex = lPose->Find("neck");
@@ -423,6 +432,11 @@ void Model::update() {
 	//lPose->Add(neckNode, neck, isLocalMatrix);
 
 	FbxAMatrix lDummyGlobalPosition;
+
+	if (newResult) {
+		modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4((double)lRotation[0], (double)lRotation[1], (double)lRotation[2], 1), FbxVector4(0, 0, 0, 0));
+		newResult = false;
+	}
 
 	if (doShocked && shocked < 99.9) shocked += 0.1;
 	else if (!doShocked && shocked > 0.1) shocked -= 0.1;

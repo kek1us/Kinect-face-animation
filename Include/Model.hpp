@@ -26,6 +26,7 @@ public:
 	void setShocked() { doShocked = true; }
 	void undoShocked() { doShocked = false; }
 	void modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S);
+	void registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation);
 
 private:
 
@@ -70,4 +71,10 @@ private:
 	// PLACEHOLDER
 	double shocked;
 	bool doShocked;
+	bool newResult;
+
+	// RESULTSHOLDER
+	FLOAT lScale;
+	FLOAT* lRotation;
+	FLOAT* lTranslation;
 };

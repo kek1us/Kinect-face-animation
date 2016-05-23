@@ -236,35 +236,24 @@ void Kinect::update() {
 		pFT->GetShapeUnits(NULL, &pSU, &numSU, &suConverged);
 		POINT viewOffset = { 0, 0 };
 		FT_CAMERA_CONFIG cameraConfig;
-		if (kinect)
-		{
-			GetVideoConfiguration(&cameraConfig);
-		}
-		else
-		{
-			cameraConfig.Width = 640;
-			cameraConfig.Height = 480;
-			cameraConfig.FocalLength = 500.0f;
-		}
+		GetVideoConfiguration(&cameraConfig);
+
 		IFTModel* ftModel;
 		HRESULT hr = pFT->GetFaceModel(&ftModel);
 		if (SUCCEEDED(hr))
 		{
 			hr = VisualizeFaceModel(pColorFrame, ftModel, &cameraConfig, pSU, 1.0, viewOffset, pFTResult, 0x00FFFF00);
 			
-			if (isRecording) {
-				FLOAT pHeadScale = 15;
-				FLOAT** pSUCoefs = NULL;
-				UINT pSUCount;
-				BOOL pHaveConverged;
-				HRESULT hr_su = pFT->GetShapeUnits(&pHeadScale, pSUCoefs, &pSUCount, &pHaveConverged);
-				if (!SUCCEEDED(hr_su)) {
-					std::cout << "Could not read the Shape Units of the Face Model" << std::endl;
-				}
-				else {
-					// Print the data of the Face Model to the file
+			// Register the results
+			FLOAT* pScale;
+			FLOAT* rot;
+			FLOAT* trans;
+			pFTResult->Get3DPose(pScale, rot, trans);
+			
 
-				}
+			if (isRecording) {
+				// Print the data of the Face Model to the file
+
 			}
 
 			ftModel->Release();
