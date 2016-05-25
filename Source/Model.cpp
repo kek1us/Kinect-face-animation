@@ -200,19 +200,23 @@ void Model::getFBXData(FbxNode* node) {
 
 void Model::setDefaultPose() {
 	// Index of the head matrix is 3, because of how the model is built
-	int index = 3;
+	int index = 0;
+	matrixHeadO = lPose->GetMatrix(index);
+	index = 3;
 	matrixHead = lPose->GetMatrix(index);
 	
 	// In the case of the jaw, we just look for its index in the pose
-	matrixJaw = lPose->GetMatrix(lPose->Find("jaw"));
-	matrixJawEnd = lPose->GetMatrix(lPose->Find("jawEnd"));
+	std::string s = "jaw";
+	matrixJaw = lPose->GetMatrix(lPose->Find(s.c_str()));
+	s = "jawEnd";
+	matrixJawEnd = lPose->GetMatrix(lPose->Find(s.c_str()));
 	matrixNeck = lPose->GetMatrix(lPose->Find("neck"));
 	matrixGrp = lPose->GetMatrix(lPose->Find("Boris_Grp"));
 	matrixHeadTop = lPose->GetMatrix(lPose->Find("headTop"));
 	//matrixLeftEye = lPose->GetMatrix(lPose->Find("leftEye"));
 	//matrixRightEye = lPose->GetMatrix(lPose->Find("rightEye"));
 	
-	//modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(8, 18, -3, 1), FbxVector4(1, 1, 1, 0));
+	modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(10, 0, 0, 1), FbxVector4(1, 1, 1, 0));
 	//modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(5, 4, -10, 1), FbxVector4(0, 0, 0, 0));
 }
 
@@ -227,8 +231,11 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	bool isLocalMatrix = false;
 
 	// Translate the face
-	//index = lPose->Find("head");
-	//lPose->Remove(index);
+	index = lPose->Find("head");
+	node = lPose->GetNode(index);
+	lPose->Remove(index);
+	lPose->Add(node, matrixHeadO, isLocalMatrix);
+
 	index = lPose->Find("head");
 	node = lPose->GetNode(index);
 	matrix = lPose->GetMatrix(index);
@@ -257,9 +264,9 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	////matrix2.SetTRS(pTranslation + T*1.8, pRotation + FbxVector4(0, 0, 0, 1), pScaling*S);
 	//lPose->Remove(index);
 	//lPose->Add(node, matrix2, isLocalMatrix);
-
-	//modifyMatrix("jaw", T*1.8, R, S);
-	modifyMatrix("gums", T*1.8, R, S);
+	std::string s = "jaw";
+	modifyMatrix(s.c_str(), T*1.8, FbxVector4(R[0] * 1.8, -R[1] * 2.8, R[2] * 2), S);
+	//modifyMatrix("gums", T*1.8, R, S);
 	//modifyMatrix("headTop", T*1.8, R, S);
 	//modifyMatrix("Boris_Grp", T*1.8, R, S);
 	//modifyMatrix("neck", T*1.8, R, S);
@@ -278,12 +285,12 @@ void Model::modifyMatrix(FbxNameHandler name, FbxVector4 T, FbxVector4 R, FbxVec
 	matrix = lPose->GetMatrix(index);
 	isLocalMatrix = lPose->IsLocalMatrix(index);
 
-	if (name.GetInitialName() == "head") matrixHead.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == "jaw") matrixJaw.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == "jawEnd") matrixJawEnd.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == "neck") matrixNeck.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == "Boris_Grp") matrixGrp.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == "headTop") matrixHeadTop.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	if (name.GetInitialName() == (std::string)"head") matrixHead.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == (std::string)"jaw") matrixJaw.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == (std::string)"jawEnd") matrixJawEnd.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == (std::string)"neck") matrixNeck.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == (std::string)"Boris_Grp") matrixGrp.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	else if (name.GetInitialName() == (std::string)"headTop") matrixHeadTop.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
 	//else if (name.GetInitialName() == "leftEye") matrixLeftEye.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
 	//else if (name.GetInitialName() == "rightEye") matrixRightEye.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
 	
@@ -304,10 +311,10 @@ void Model::update() {
 	FbxAMatrix lDummyGlobalPosition;
 
 	if (newResult) {
-		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4(-lRotation[1], lRotation[0], lRotation[2], 0), FbxVector4(1, 1, 1, 0));
+		modifyHead(FbxVector4(1, 0, 0, 0), FbxVector4(-lRotation[1], lRotation[0], lRotation[2], 0), FbxVector4(1, 1, 1, 0));
 		newResult = false;
 	} else if (stopAnim) {
-		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4(0, 0, 0, 1), FbxVector4(1, 1, 1, 0));
+		modifyHead(FbxVector4(1, 0, 0, 0), FbxVector4(0, 0, 0, 1), FbxVector4(1, 1, 1, 0));
 		stopAnim = false;
 	}
 

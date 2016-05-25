@@ -75,6 +75,7 @@ private:
 	bool doShocked;
 	bool newResult;
 	bool stopAnim;
+	FbxMatrix matrixHeadO;
 	FbxMatrix matrixHead;
 	FbxMatrix matrixJaw;
 	FbxMatrix matrixJawEnd;
