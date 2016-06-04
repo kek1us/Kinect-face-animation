@@ -125,7 +125,7 @@ bool Model::loadFBX(std::string filename) {
 	mCurrentTime = mStart;
 
 	shocked = 0;
-	doShocked = true;
+	doShocked = false;
 	newResult = false;
 
 	// Get the pose to work with
@@ -216,8 +216,9 @@ void Model::setDefaultPose() {
 	//matrixLeftEye = lPose->GetMatrix(lPose->Find("leftEye"));
 	//matrixRightEye = lPose->GetMatrix(lPose->Find("rightEye"));
 	
-	modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(10, 0, 0, 1), FbxVector4(1, 1, 1, 0));
+	//modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(10, 0, 0, 1), FbxVector4(1, 1, 1, 0));
 	//modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(5, 4, -10, 1), FbxVector4(0, 0, 0, 0));
+	lRotation[0] = lRotation[1] = lRotation[2] = 0.0f;
 }
 
 void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
@@ -264,8 +265,8 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	////matrix2.SetTRS(pTranslation + T*1.8, pRotation + FbxVector4(0, 0, 0, 1), pScaling*S);
 	//lPose->Remove(index);
 	//lPose->Add(node, matrix2, isLocalMatrix);
-	std::string s = "jaw";
-	modifyMatrix(s.c_str(), T*1.8, FbxVector4(R[0] * 1.8, -R[1] * 2.8, R[2] * 2), S);
+	modifyMatrix("jaw", T*1.8, FbxVector4(R[0] / 2.5, -R[1] * 2.8, 0), S);
+	modifyMatrix("jawEnd", FbxVector4(R[0]/5.5, abs(R[0] / 100), 0), FbxVector4(0, R[0] * 4, R[2] * 2), S);
 	//modifyMatrix("gums", T*1.8, R, S);
 	//modifyMatrix("headTop", T*1.8, R, S);
 	//modifyMatrix("Boris_Grp", T*1.8, R, S);
@@ -301,8 +302,17 @@ void Model::modifyMatrix(FbxNameHandler name, FbxVector4 T, FbxVector4 R, FbxVec
 
 void Model::registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation) {
 	lScale = *scale;
-	lRotation = rotation;
+	lRotation[0] = rotation[0];
+	lRotation[1] = rotation[1];
+	lRotation[2] = rotation[2];
 	lTranslation = translation;
+	newResult = true;
+}
+
+void Model::increaseRotation(FLOAT xAxis, FLOAT yAxis, FLOAT zAxis) {
+	if (lRotation[0] + xAxis > -20 && lRotation[0] + xAxis < 20) lRotation[0] += xAxis;
+	if (lRotation[1] + yAxis > -20 && lRotation[1] + yAxis < 20) lRotation[1] += yAxis;
+	if (lRotation[2] + zAxis > -20 && lRotation[2] + zAxis < 20) lRotation[2] += zAxis;
 	newResult = true;
 }
 
@@ -311,10 +321,11 @@ void Model::update() {
 	FbxAMatrix lDummyGlobalPosition;
 
 	if (newResult) {
-		modifyHead(FbxVector4(1, 0, 0, 0), FbxVector4(-lRotation[1], lRotation[0], lRotation[2], 0), FbxVector4(1, 1, 1, 0));
+		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4((double)-lRotation[1], (double)lRotation[0], (double)lRotation[2], 1), FbxVector4(1, 1, 1, 0));
+		std::cout << -lRotation[1] << " " << lRotation[0] << " " << lRotation[2] << std::endl;
 		newResult = false;
 	} else if (stopAnim) {
-		modifyHead(FbxVector4(1, 0, 0, 0), FbxVector4(0, 0, 0, 1), FbxVector4(1, 1, 1, 0));
+		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4(0, 0, 0, 1), FbxVector4(1, 1, 1, 0));
 		stopAnim = false;
 	}
 

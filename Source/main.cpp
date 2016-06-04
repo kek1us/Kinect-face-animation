@@ -79,6 +79,12 @@ int main() {
 					break;
 				case sf::Event::KeyPressed:
 					switch (event.key.code) {
+						case sf::Keyboard::Num1: M.increaseRotation(1, 0.0f, 0.0f); break;
+						case sf::Keyboard::Num2: M.increaseRotation(-1, 0.0f, 0.0f); break;
+						case sf::Keyboard::Num3: M.increaseRotation(0.0f, 1.0f, 0.0f); break;
+						case sf::Keyboard::Num4: M.increaseRotation(0.0f, -1.0f, 0.0f); break;
+						case sf::Keyboard::Num5: M.increaseRotation(0.0f, 0.0f, 1.0f); break;
+						case sf::Keyboard::Num6: M.increaseRotation(0.0f, 0.0f, -1.0f); break;
 						case sf::Keyboard::P: K.playRecord(); break;
 						case sf::Keyboard::R: K.record(); break;
 						case sf::Keyboard::S: K.stopRecord(); break;

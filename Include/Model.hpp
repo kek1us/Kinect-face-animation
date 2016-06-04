@@ -30,6 +30,8 @@ public:
 	void registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation);
 	void stopAnimation() { stopAnim = true; };
 
+	void increaseRotation(FLOAT xAxis, FLOAT yAxis, FLOAT zAxis);
+
 private:
 
 	// OpenGL Variables
@@ -87,6 +89,6 @@ private:
 
 	// RESULTSHOLDER
 	FLOAT lScale;
-	FLOAT* lRotation;
+	FLOAT lRotation[3];
 	FLOAT* lTranslation;
 };
