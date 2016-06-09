@@ -124,7 +124,7 @@ bool Model::loadFBX(std::string filename) {
 
 	mCurrentTime = mStart;
 
-	shocked = 0;
+	shocked = happy = 0;
 	doShocked = false;
 	newResult = false;
 
@@ -265,8 +265,12 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	////matrix2.SetTRS(pTranslation + T*1.8, pRotation + FbxVector4(0, 0, 0, 1), pScaling*S);
 	//lPose->Remove(index);
 	//lPose->Add(node, matrix2, isLocalMatrix);
-	modifyMatrix("jaw", T*1.8, FbxVector4(R[0] / 2.5, -R[1] * 2.8, 0), S);
-	modifyMatrix("jawEnd", FbxVector4(R[0]/5.5, abs(R[0] / 100), 0), FbxVector4(0, R[0] * 4, R[2] * 2), S);
+	modifyMatrix("jaw", T*1.8, FbxVector4(0, -R[1] * 2.8, 0), S);
+	//double ty = R[0] != 0 && R[2] != 0 ? (R[0] * R[2] < 0) ? (abs(R[0] / 100) - abs(R[2] / 25)) : abs(R[0] / 100) + abs(R[2] / 22.5) : R[0] == 0 ? 0 : (abs(R[0] / 100));
+	double ty = R[0] != 0 && R[2] != 0 ? (R[0] * R[2] < 0) ? -(abs(R[0]) / 100) : abs(R[0] / 100) + abs(R[2] / 22.5) : R[0] == 0 ? 0 : (abs(R[0] / 100));
+	//ty = sin((R[0]+R[2]) * PI / 180);
+	//std::cout << ty << std::endl;
+	modifyMatrix("jawEnd", FbxVector4(R[0]/5.5, ty, 0), FbxVector4(0, R[0] * 2.5, R[2] * 2), S);
 	//modifyMatrix("gums", T*1.8, R, S);
 	//modifyMatrix("headTop", T*1.8, R, S);
 	//modifyMatrix("Boris_Grp", T*1.8, R, S);
@@ -300,12 +304,16 @@ void Model::modifyMatrix(FbxNameHandler name, FbxVector4 T, FbxVector4 R, FbxVec
 	lPose->Add(node, matrix, isLocalMatrix);
 }
 
-void Model::registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation) {
+void Model::registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation, FLOAT* AU, UINT* numAU, FLOAT* SU, UINT* numSU) {
 	lScale = *scale;
 	lRotation[0] = rotation[0];
 	lRotation[1] = rotation[1];
 	lRotation[2] = rotation[2];
 	lTranslation = translation;
+	lAU = AU;
+	lNumAU = *numAU;
+	lSU = SU;
+	lNumSU = *numSU;
 	newResult = true;
 }
 
@@ -322,15 +330,28 @@ void Model::update() {
 
 	if (newResult) {
 		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4((double)-lRotation[1], (double)lRotation[0], (double)lRotation[2], 1), FbxVector4(1, 1, 1, 0));
-		std::cout << -lRotation[1] << " " << lRotation[0] << " " << lRotation[2] << std::endl;
+		//std::cout << -lRotation[1] << " " << lRotation[0] << " " << lRotation[2] << std::endl;
+		//for (int i = 0; i < lNumAU; ++i) {
+		//	if (i != 0) std::cout << " ";
+		//	std::cout << lAU[i];
+		//}
+		//std::cout << std::endl;
+		shocked = -(lAU[3] * 100) * 4 + 100;
+		if (shocked > 99.9) shocked = 99.9;
+		else if (shocked < 0.1) shocked = 0.1;
+		happy = -(lAU[4] * 100) * 3 + 20;
+		if (happy > 99.9) happy = 99.9;
+		else if (happy < 0.1) happy = 0.1;
+		std::cout << happy << std::endl;
 		newResult = false;
 	} else if (stopAnim) {
 		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4(0, 0, 0, 1), FbxVector4(1, 1, 1, 0));
+		shocked = 50;
 		stopAnim = false;
 	}
 
-	if (doShocked && shocked < 99.9) shocked += 0.5;
-	else if (!doShocked && shocked > 0.1) shocked -= 0.5;
+	//if (doShocked && shocked < 99.9) shocked += 0.5;
+	//else if (!doShocked && shocked > 0.1) shocked -= 0.5;
 
 	// Reset the vertices array
 	vertices.clear();
@@ -345,6 +366,7 @@ void Model::update() {
 
 	std::vector<double> weights;
 	weights.push_back(shocked);
+	weights.push_back(happy);
 	DrawNodeRecursive(lScene->GetRootNode(), mCurrentTime, mCurrentAnimLayer, lDummyGlobalPosition, lPose, getVerticesArray(), &weights);
 	//DisplayGrid(lDummyGlobalPosition);
 

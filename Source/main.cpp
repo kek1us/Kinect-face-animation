@@ -109,7 +109,11 @@ int main() {
 					FLOAT* sc = K.GetScale();
 					FLOAT* rot = K.GetRotation();
 					FLOAT* trans = K.GetTranslation();
-					M.registerResult(sc, rot, trans);
+					FLOAT* AU = K.GetAnimationUnits();
+					UINT* numAU = K.GetNumAU();
+					FLOAT* SU = K.GetShapeUnits();
+					UINT* numSU = K.GetNumSU();
+					M.registerResult(sc, rot, trans, AU, numAU, SU, numSU);
 				}
 				else M.stopAnimation();
 			}

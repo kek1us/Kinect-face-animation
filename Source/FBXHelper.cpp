@@ -1090,12 +1090,12 @@ void MatrixAdd(FbxAMatrix& pDstMatrix, FbxAMatrix& pSrcMatrix)
 double evaluateChannel(std::vector<double>* weights, FbxString name) {
 	double weight = 0;
 
-	if (name == "mouthEyes_Blend.shocked") {
+	if (name == "mouthEyes_Blend.rightBrowRaise" || name == "mouthEyes_Blend.leftBrowRaise") {
 		weight = weights->at(0);
 		//std::cout << name << ": " << weight << std::endl;
 	}
 	else if (name == "mouthEyes_Blend.smile") {
-		weight = weights->at(0);
+		weight = weights->at(1);
 		//std::cout << name << ": " << weight << std::endl;
 	}
 

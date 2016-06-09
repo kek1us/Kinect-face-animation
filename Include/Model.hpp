@@ -27,7 +27,7 @@ public:
 	void setDefaultPose();
 	void modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S);
 	void modifyMatrix(FbxNameHandler name, FbxVector4 T, FbxVector4 R, FbxVector4 S);
-	void registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation);
+	void registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation, FLOAT* AU, UINT* numAU, FLOAT* SU, UINT* numSU);
 	void stopAnimation() { stopAnim = true; };
 
 	void increaseRotation(FLOAT xAxis, FLOAT yAxis, FLOAT zAxis);
@@ -74,6 +74,7 @@ private:
 
 	// PLACEHOLDER
 	double shocked;
+	double happy;
 	bool doShocked;
 	bool newResult;
 	bool stopAnim;
@@ -91,4 +92,8 @@ private:
 	FLOAT lScale;
 	FLOAT lRotation[3];
 	FLOAT* lTranslation;
+	FLOAT* lAU;
+	FLOAT* lSU;
+	UINT lNumAU;
+	UINT lNumSU;
 };

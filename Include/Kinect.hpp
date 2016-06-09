@@ -32,6 +32,10 @@ public:
 	FLOAT* GetScale() { return &scale; };
 	FLOAT* GetRotation() { return rotation; };
 	FLOAT* GetTranslation() { return translation; };
+	FLOAT* GetAnimationUnits() { return pAU; };
+	UINT* GetNumAU() { return &numAU; };
+	FLOAT* GetShapeUnits() { return pSU; };
+	UINT* GetNumSU() { return &numSU; };
 	bool IsTracked() { return isTracked; };
 
 private:
@@ -67,4 +71,8 @@ private:
 	FLOAT scale;
 	FLOAT rotation[3];
 	FLOAT translation[3];
+	FLOAT* pSU;
+	FLOAT* pAU;
+	UINT numSU;
+	UINT numAU;
 };
