@@ -26,11 +26,11 @@ bool init() {
 	glEnable(GL_CULL_FACE);
 
 	// Accept fragment if it closer to the camera than the former one
-	//glDepthFunc(GL_LEQUAL);
-	//glDepthRange(0.1f, 1.0f);
+	glDepthFunc(GL_LEQUAL);
+	glDepthRange(0.1f, 1.0f);
 
 	// Cull triangles which normal is not towards the camera
-	//glCullFace(GL_BACK);
+	glCullFace(GL_BACK);
 
 	// Enable blending
 	//glEnable(GL_BLEND);

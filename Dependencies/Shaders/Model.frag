@@ -19,7 +19,7 @@ void main(){
 		// Light emission properties
 	// You probably want to put them as uniforms
 	vec3 LightColor = vec3(1,1,1);
-	float LightPower = 500.0f;
+	float LightPower = 450.0f;
 	vec2 new_uv;
 	new_uv = vec2(UV.x, 1.0 - UV.y);	
 

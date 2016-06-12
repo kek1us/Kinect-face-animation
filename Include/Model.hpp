@@ -26,7 +26,6 @@ public:
 	void undoShocked() { doShocked = false; };
 	void setDefaultPose();
 	void modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S);
-	void modifyMatrix(FbxNameHandler name, FbxVector4 T, FbxVector4 R, FbxVector4 S);
 	void registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation, FLOAT* AU, UINT* numAU, FLOAT* SU, UINT* numSU);
 	void stopAnimation() { stopAnim = true; };
 
@@ -36,9 +35,6 @@ private:
 
 	// OpenGL Variables
 	GLuint textureId;
-	GLuint vertexbuffer_quads;
-	GLuint uvbuffer_quads;
-	GLuint normalbuffer_quads;
 	GLuint vertexbuffer_triangles;
 	GLuint uvbuffer_triangles;
 	GLuint normalbuffer_triangles;
@@ -80,13 +76,6 @@ private:
 	bool stopAnim;
 	FbxMatrix matrixHeadO;
 	FbxMatrix matrixHead;
-	FbxMatrix matrixJaw;
-	FbxMatrix matrixJawEnd;
-	FbxMatrix matrixNeck;
-	FbxMatrix matrixGrp;
-	FbxMatrix matrixHeadTop;
-	//FbxMatrix matrixLeftEye;
-	//FbxMatrix matrixRightEye;
 
 	// RESULTSHOLDER
 	FLOAT lScale;

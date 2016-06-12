@@ -3,9 +3,6 @@
 Model::Model() {}
 
 Model::~Model() {
-	glDeleteBuffers(1, &vertexbuffer_quads);
-	glDeleteBuffers(1, &uvbuffer_quads);
-	glDeleteBuffers(1, &normalbuffer_quads);
 	glDeleteBuffers(1, &vertexbuffer_triangles);
 	glDeleteBuffers(1, &uvbuffer_triangles);
 	glDeleteBuffers(1, &normalbuffer_triangles);
@@ -25,25 +22,13 @@ bool Model::init() {
 }
 
 bool Model::initVBO() {
-	glGenBuffers(1, &vertexbuffer_quads);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_quads);
-	glBufferData(GL_ARRAY_BUFFER, vertices_quads.size() * sizeof(glm::vec3), &vertices_quads[0], GL_STATIC_DRAW);
-
 	glGenBuffers(1, &vertexbuffer_triangles);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_triangles);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
 
-	glGenBuffers(1, &uvbuffer_quads);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer_quads);
-	glBufferData(GL_ARRAY_BUFFER, uvs_quads.size() * sizeof(glm::vec2), &uvs_quads[0], GL_STATIC_DRAW);
-
 	glGenBuffers(1, &uvbuffer_triangles);
 	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer_triangles);
 	glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
-
-	glGenBuffers(1, &normalbuffer_quads);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer_quads);
-	glBufferData(GL_ARRAY_BUFFER, normals_quads.size() * sizeof(glm::vec3), &normals_quads[0], GL_STATIC_DRAW);
 
 	glGenBuffers(1, &normalbuffer_triangles);
 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer_triangles);
@@ -79,8 +64,8 @@ bool Model::loadFBX(std::string filename) {
 
 	////////////////////////// HURR DURR
 	// Convert mesh, NURBS and patch into triangle mesh
-	//FbxGeometryConverter lGeomConverter(lSdkManager);
-	//lGeomConverter.Triangulate(lScene, /*replace*/true);
+	FbxGeometryConverter lGeomConverter(lSdkManager);
+	lGeomConverter.Triangulate(lScene, /*replace*/true);
 
 	FbxArray<FbxString*> mAnimStackNameArray;
 	lScene->FillAnimStackNameArray(mAnimStackNameArray);
@@ -199,39 +184,51 @@ void Model::getFBXData(FbxNode* node) {
 }
 
 void Model::setDefaultPose() {
-	// Index of the head matrix is 3, because of how the model is built
+	// Index of the head matrices are 0 and 3, because of how the model is built
+	FbxNode * node;
+	FbxMatrix matrixJaw, matrixJawEnd, matrixHeadTop;
+	lPose->SetIsBindPose(false);
 	int index = 0;
 	matrixHeadO = lPose->GetMatrix(index);
 	index = 3;
 	matrixHead = lPose->GetMatrix(index);
 	
-	// In the case of the jaw, we just look for its index in the pose
-	std::string s = "jaw";
-	matrixJaw = lPose->GetMatrix(lPose->Find(s.c_str()));
-	s = "jawEnd";
-	matrixJawEnd = lPose->GetMatrix(lPose->Find(s.c_str()));
-	matrixNeck = lPose->GetMatrix(lPose->Find("neck"));
-	matrixGrp = lPose->GetMatrix(lPose->Find("Boris_Grp"));
+	// In the case of the other skeletons, we just look for their indices in the pose
+	// and rebuild the model with local matrices
+	matrixJaw = lPose->GetMatrix(lPose->Find("jaw"));
+	matrixJawEnd = lPose->GetMatrix(lPose->Find("jawEnd"));
 	matrixHeadTop = lPose->GetMatrix(lPose->Find("headTop"));
-	//matrixLeftEye = lPose->GetMatrix(lPose->Find("leftEye"));
-	//matrixRightEye = lPose->GetMatrix(lPose->Find("rightEye"));
 	
-	//modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(10, 0, 0, 1), FbxVector4(1, 1, 1, 0));
-	//modifyHead(FbxVector4(0, 0, 0, 1), FbxVector4(5, 4, -10, 1), FbxVector4(0, 0, 0, 0));
+	matrixJawEnd = matrixJaw.Inverse() * matrixJawEnd;
+	index = lPose->Find("jawEnd");
+	node = lPose->GetNode(index);
+	lPose->Remove(index);
+	lPose->Add(node, matrixJawEnd, true);
+
+	matrixJaw = matrixHead.Inverse() * matrixJaw;
+	index = lPose->Find("jaw");
+	node = lPose->GetNode(index);
+	lPose->Remove(index);
+	lPose->Add(node, matrixJaw, true);
+
+	matrixHeadTop = matrixHead.Inverse() * matrixHeadTop;
+	index = lPose->Find("headTop");
+	node = lPose->GetNode(index);
+	lPose->Remove(index);
+	lPose->Add(node, matrixHeadTop, true);
+
 	lRotation[0] = lRotation[1] = lRotation[2] = 0.0f;
 }
 
 void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	FbxNode * node;
-	FbxMatrix matrix, matrix2;
-	FbxAMatrix lM;
+	FbxMatrix matrix;
 	FbxVector4 pTranslation, pRotation, pShearing, pScaling;
-	FbxQuaternion lQ1, lQ2, lQ3, lQ4;
 	double pSign;
 	int index;
 	bool isLocalMatrix = false;
 
-	// Translate the face
+	// Translate the head
 	index = lPose->Find("head");
 	node = lPose->GetNode(index);
 	lPose->Remove(index);
@@ -244,62 +241,6 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 
 	matrixHead.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
 	matrix.SetTRS(pTranslation + T, pRotation + R, pScaling*S);
-	lPose->Remove(index);
-	lPose->Add(node, matrix, isLocalMatrix);
-
-	//// Translate the jaw as well, as it is not well linked
-	//index = lPose->Find("jaw");
-	//node = lPose->GetNode(index);
-	//matrix2 = lPose->GetMatrix(index);
-	//isLocalMatrix = lPose->IsLocalMatrix(index);
-
-	//matrixJaw.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-
-	//lM.SetR(pRotation);
-	//lQ1.SetAxisAngle(FbxVector4(1, 0, 0), -R[1] * 2.5);
-	//lQ2.SetAxisAngle(FbxVector4(0, 1, 0), R[0] * 2.5);
-	//lQ3.SetAxisAngle(FbxVector4(0, 0, 1), R[2]*1.8);
-	//lQ4 = lM.GetQ();
-
-	//matrix2.SetTRS(pTranslation + T*1.8, pRotation + FbxVector4(-R[1], R[0], R[2], R[3]), pScaling*S);
-	////matrix2.SetTRS(pTranslation + T*1.8, pRotation + FbxVector4(0, 0, 0, 1), pScaling*S);
-	//lPose->Remove(index);
-	//lPose->Add(node, matrix2, isLocalMatrix);
-	modifyMatrix("jaw", T*1.8, FbxVector4(0, -R[1] * 2.8, 0), S);
-	//double ty = R[0] != 0 && R[2] != 0 ? (R[0] * R[2] < 0) ? (abs(R[0] / 100) - abs(R[2] / 25)) : abs(R[0] / 100) + abs(R[2] / 22.5) : R[0] == 0 ? 0 : (abs(R[0] / 100));
-	double ty = R[0] != 0 && R[2] != 0 ? (R[0] * R[2] < 0) ? -(abs(R[0]) / 100) : abs(R[0] / 100) + abs(R[2] / 22.5) : R[0] == 0 ? 0 : (abs(R[0] / 100));
-	//ty = sin((R[0]+R[2]) * PI / 180);
-	//std::cout << ty << std::endl;
-	modifyMatrix("jawEnd", FbxVector4(R[0]/5.5, ty, 0), FbxVector4(0, R[0] * 2.5, R[2] * 2), S);
-	//modifyMatrix("gums", T*1.8, R, S);
-	//modifyMatrix("headTop", T*1.8, R, S);
-	//modifyMatrix("Boris_Grp", T*1.8, R, S);
-	//modifyMatrix("neck", T*1.8, R, S);
-	//modifyMatrix("leftEye", T*1.8, FbxVector4(R[1], R[0], R[2], R[3]), S);
-	//modifyMatrix("rightEye", T*1.8, FbxVector4(R[1], R[0], R[2], R[3]), S);
-}
-
-void Model::modifyMatrix(FbxNameHandler name, FbxVector4 T, FbxVector4 R, FbxVector4 S) {
-	FbxNode * node;
-	FbxMatrix matrix;
-	FbxVector4 pTranslation, pRotation, pShearing, pScaling;
-	double pSign;
-	bool isLocalMatrix = false;
-	int index = lPose->Find(name);
-	node = lPose->GetNode(index);
-	matrix = lPose->GetMatrix(index);
-	isLocalMatrix = lPose->IsLocalMatrix(index);
-
-	if (name.GetInitialName() == (std::string)"head") matrixHead.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == (std::string)"jaw") matrixJaw.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == (std::string)"jawEnd") matrixJawEnd.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == (std::string)"neck") matrixNeck.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == (std::string)"Boris_Grp") matrixGrp.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	else if (name.GetInitialName() == (std::string)"headTop") matrixHeadTop.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	//else if (name.GetInitialName() == "leftEye") matrixLeftEye.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	//else if (name.GetInitialName() == "rightEye") matrixRightEye.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
-	
-	matrix.SetTRS(pTranslation + T, pRotation + R, pScaling * S);
 	lPose->Remove(index);
 	lPose->Add(node, matrix, isLocalMatrix);
 }
@@ -324,25 +265,21 @@ void Model::increaseRotation(FLOAT xAxis, FLOAT yAxis, FLOAT zAxis) {
 	newResult = true;
 }
 
-
 void Model::update() {
 	FbxAMatrix lDummyGlobalPosition;
 
 	if (newResult) {
 		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4((double)-lRotation[1], (double)lRotation[0], (double)lRotation[2], 1), FbxVector4(1, 1, 1, 0));
-		//std::cout << -lRotation[1] << " " << lRotation[0] << " " << lRotation[2] << std::endl;
-		//for (int i = 0; i < lNumAU; ++i) {
-		//	if (i != 0) std::cout << " ";
-		//	std::cout << lAU[i];
-		//}
-		//std::cout << std::endl;
-		shocked = -(lAU[3] * 100) * 4 + 100;
-		if (shocked > 99.9) shocked = 99.9;
-		else if (shocked < 0.1) shocked = 0.1;
-		happy = -(lAU[4] * 100) * 3 + 20;
-		if (happy > 99.9) happy = 99.9;
-		else if (happy < 0.1) happy = 0.1;
-		std::cout << happy << std::endl;
+
+		if (lAU != NULL) {
+			shocked = -(lAU[3] * 100) * 4 + 100;
+			if (shocked > 99.9) shocked = 99.9;
+			else if (shocked < 0.1) shocked = 0.1;
+			happy = -(lAU[4] * 100) * 3 + 20;
+			if (happy > 99.9) happy = 99.9;
+			else if (happy < 0.1) happy = 0.1;
+			std::cout << happy << std::endl;
+		}
 		newResult = false;
 	} else if (stopAnim) {
 		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4(0, 0, 0, 1), FbxVector4(1, 1, 1, 0));
@@ -357,12 +294,12 @@ void Model::update() {
 	vertices.clear();
 
 	// HERERERERERERERERERE
-	mCurrentTime += mFrameTime;
+	//mCurrentTime += mFrameTime;
 
-	if (mCurrentTime > mStop)
-	{
-		mCurrentTime = mStart;
-	}
+	//if (mCurrentTime > mStop)
+	//{
+	//	mCurrentTime = mStart;
+	//}
 
 	std::vector<double> weights;
 	weights.push_back(shocked);
@@ -400,54 +337,13 @@ void Model::render() {
 	glUniformMatrix4fv(mvp_handle, 1, GL_FALSE, &mvp[0][0]);
 	glUniformMatrix4fv(ModelMatrix_handle, 1, GL_FALSE, &Model[0][0]);
 	glUniformMatrix4fv(ViewMatrix_handle, 1, GL_FALSE, &View[0][0]);
-	glUniform3f(Light_handle, -3.5, 20, 15);
+	glUniform3f(Light_handle, -3.5, 0, 25);
 
 	// Bind our texture in Texture Unit 0
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, textureId);
 	// Set our "myTextureSampler" sampler to user Texture Unit 0
 	glUniform1i(texture_handle, 0);
-
-	//// 1rst attribute buffer : vertices
-	//glEnableVertexAttribArray(0);
-	//glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_quads);
-	//glVertexAttribPointer(
-	//	0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-	//	3,                  // size
-	//	GL_FLOAT,           // type
-	//	GL_FALSE,           // normalized?
-	//	0,                  // stride
-	//	(void*)0            // array buffer offset
-	//	);
-	//// 2nd attribute buffer : colors
-	//glEnableVertexAttribArray(1);
-	//glBindBuffer(GL_ARRAY_BUFFER, uvbuffer_quads);
-	//glVertexAttribPointer(
-	//	1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
-	//	2,                                // size
-	//	GL_FLOAT,	                       // type
-	//	GL_TRUE,                         // normalized?
-	//	0,                                // stride
-	//	(void*)0                          // array buffer offset
-	//	);
-
-	//// 3rd attribute buffer : normals
-	//glEnableVertexAttribArray(2);
-	//glBindBuffer(GL_ARRAY_BUFFER, normalbuffer_quads);
-	//glVertexAttribPointer(
-	//	2,                                // attribute
-	//	3,                                // size
-	//	GL_FLOAT,                         // type
-	//	GL_FALSE,                         // normalized?
-	//	0,                                // stride
-	//	(void*)0                          // array buffer offset
-	//	);
-
-	//glDrawArrays(GL_QUADS, 0, vertices_quads.size());
-
-	//glDisableVertexAttribArray(0);
-	//glDisableVertexAttribArray(1);
-	//glDisableVertexAttribArray(2);
 
 	// 1rst attribute buffer : vertices
 	glEnableVertexAttribArray(0);
