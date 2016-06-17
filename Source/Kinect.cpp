@@ -1,6 +1,8 @@
 #include "Kinect.hpp"
 
-Kinect::Kinect() {}
+Kinect::Kinect() {
+	m_bNuiInitialized = false;
+}
 
 Kinect::~Kinect() {
 	glDeleteBuffers(1, &vertexbuffer);
@@ -12,6 +14,12 @@ Kinect::~Kinect() {
 		pColorFrame->Release();
 		pDepthFrame->Release();
 		pFT->Release();
+
+		if (m_bNuiInitialized)
+		{
+			NuiShutdown();
+		}
+		m_bNuiInitialized = false;
 	}
 }
 
@@ -43,7 +51,14 @@ bool Kinect::initKinect() {
 	if (NuiCreateSensorByIndex(0, &sensor) < 0) return false;
 
 	// Initialize sensor
-	sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_COLOR);
+	HRESULT hr = sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	m_bNuiInitialized = true;
+
 	sensor->NuiImageStreamOpen(
 		NUI_IMAGE_TYPE_COLOR,            // Depth camera or rgb camera?
 		NUI_IMAGE_RESOLUTION_640x480,    // Image resolution
@@ -67,7 +82,7 @@ bool Kinect::initKinect() {
 		return false;
 	}
 
-	HRESULT hr = m_VideoBuffer->Allocate(640, 480, FTIMAGEFORMAT_UINT8_B8G8R8X8);
+	hr = m_VideoBuffer->Allocate(640, 480, FTIMAGEFORMAT_UINT8_B8G8R8X8);
 	if (FAILED(hr))
 	{
 		return false;
@@ -85,7 +100,7 @@ bool Kinect::initKinect() {
 		return false;
 	}
 
-	return sensor;
+	return true;
 }
 
 bool Kinect::initFaceTrack() {
@@ -125,6 +140,21 @@ bool Kinect::initFaceTrack() {
 
 	isTracked = false;
 	SetCenterOfImage(NULL);
+
+	m_hint3D[0] = m_hint3D[1] = FT_VECTOR3D(0, 0, 0);
+
+	for (int i = 0; i < NUI_SKELETON_COUNT; ++i)
+	{
+		m_HeadPoint[i] = m_NeckPoint[i] = FT_VECTOR3D(0, 0, 0);
+		m_SkeletonTracked[i] = false;
+	}
+
+	DWORD dwSkeletonFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
+	hr = sensor->NuiSkeletonTrackingEnable(NULL, dwSkeletonFlags);
+	if (FAILED(hr))
+	{
+		return hr;
+	}
 
 	scale = 0.0f;
 	pSU = NULL;
@@ -208,6 +238,7 @@ void Kinect::getKinectDepth() {
 void Kinect::update() {
 	getKinectVideo();
 	getKinectDepth();
+	getSkeleton();
 
 	HRESULT hrFT = E_FAIL;
 
@@ -219,13 +250,22 @@ void Kinect::update() {
 		}
 		
 		if (SUCCEEDED(hrCopy)) {
+			FT_VECTOR3D* hint = NULL;
+			if (SUCCEEDED(GetClosestHint(m_hint3D)))
+			{
+				hint = m_hint3D;
+			}
+
 			if (!isTracked) {
-				hrFT = pFT->StartTracking(&sensorData, NULL, NULL, pFTResult);
+				hrFT = pFT->StartTracking(&sensorData, NULL, hint, pFTResult);
 			}
 			else {
-				hrFT = pFT->ContinueTracking(&sensorData, NULL, pFTResult);
+				hrFT = pFT->ContinueTracking(&sensorData, hint, pFTResult);
 			}
 		}
+	}
+	else {
+		std::cout << "Kinect disconnected" << std::endl;
 	}
 
 	isTracked = SUCCEEDED(hrFT) && SUCCEEDED(pFTResult->GetStatus());
@@ -268,6 +308,13 @@ void Kinect::update() {
 			std::cout << "Could not draw the Face Model" << std::endl;
 		}
 	}
+	//else {
+	//	for (int i = 0; i < NUI_SKELETON_COUNT; ++i)
+	//	{
+	//		m_HeadPoint[i] = m_NeckPoint[i] = FT_VECTOR3D(0, 0, 0);
+	//		m_SkeletonTracked[i] = false;
+	//	}
+	//}
 
 	// Terminate on some criteria.
 }
@@ -426,52 +473,84 @@ void Kinect::SetCenterOfImage(IFTResult* pResult)
 	}
 }
 
-//HRESULT Kinect::GetClosestHint(FT_VECTOR3D* pHint3D)
-//{
-//	int selectedSkeleton = -1;
-//	float smallestDistance = 0;
-//
-//	if (!pHint3D)
-//	{
-//		return(E_POINTER);
-//	}
-//
-//	if (pHint3D[1].x == 0 && pHint3D[1].y == 0 && pHint3D[1].z == 0)
-//	{
-//		// Get the skeleton closest to the camera
-//		for (int i = 0; i < NUI_SKELETON_COUNT; i++)
-//		{
-//			if (m_SkeletonTracked[i] && (smallestDistance == 0 || m_HeadPoint[i].z < smallestDistance))
-//			{
-//				smallestDistance = m_HeadPoint[i].z;
-//				selectedSkeleton = i;
-//			}
-//		}
-//	}
-//	else
-//	{   // Get the skeleton closest to the previous position
-//		for (int i = 0; i < NUI_SKELETON_COUNT; i++)
-//		{
-//			if (m_SkeletonTracked[i])
-//			{
-//				float d = abs(m_HeadPoint[i].x - pHint3D[1].x) +
-//					abs(m_HeadPoint[i].y - pHint3D[1].y) +
-//					abs(m_HeadPoint[i].z - pHint3D[1].z);
-//				if (smallestDistance == 0 || d < smallestDistance)
-//				{
-//					smallestDistance = d;
-//					selectedSkeleton = i;
-//				}
-//			}
-//		}
-//	}
-//	if (selectedSkeleton == -1)
-//	{
-//		return E_FAIL;
-//	}
-//
-//	pHint3D[0] = m_NeckPoint[selectedSkeleton];
-//	pHint3D[1] = m_HeadPoint[selectedSkeleton];
-//
-//	return S_OK;
-//}
+void Kinect::getSkeleton() 
+{
+	NUI_SKELETON_FRAME SkeletonFrame = { 0 };
+
+	HRESULT hr = sensor->NuiSkeletonGetNextFrame(0, &SkeletonFrame);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	
+	for (int i = 0; i < NUI_SKELETON_COUNT; i++)
+	{
+		if (SkeletonFrame.SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED &&
+			NUI_SKELETON_POSITION_TRACKED == SkeletonFrame.SkeletonData[i].eSkeletonPositionTrackingState[NUI_SKELETON_POSITION_HEAD] &&
+			NUI_SKELETON_POSITION_TRACKED == SkeletonFrame.SkeletonData[i].eSkeletonPositionTrackingState[NUI_SKELETON_POSITION_SHOULDER_CENTER])
+		{
+			m_SkeletonTracked[i] = true;
+			m_HeadPoint[i].x = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].x;
+			m_HeadPoint[i].y = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].y;
+			m_HeadPoint[i].z = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].z;
+			m_NeckPoint[i].x = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].x;
+			m_NeckPoint[i].y = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].y;
+			m_NeckPoint[i].z = SkeletonFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].z;
+		}
+		else
+		{
+			m_HeadPoint[i] = m_NeckPoint[i] = FT_VECTOR3D(0, 0, 0);
+			m_SkeletonTracked[i] = false;
+		}
+	}
+}
+
+HRESULT Kinect::GetClosestHint(FT_VECTOR3D* pHint3D)
+{
+	int selectedSkeleton = -1;
+	float smallestDistance = 0;
+
+	if (!pHint3D)
+	{
+		return(E_POINTER);
+	}
+
+	if (pHint3D[1].x == 0 && pHint3D[1].y == 0 && pHint3D[1].z == 0)
+	{
+		// Get the skeleton closest to the camera
+		for (int i = 0; i < NUI_SKELETON_COUNT; i++)
+		{
+			if (m_SkeletonTracked[i] && (smallestDistance == 0 || m_HeadPoint[i].z < smallestDistance))
+			{
+				smallestDistance = m_HeadPoint[i].z;
+				selectedSkeleton = i;
+			}
+		}
+	}
+	else
+	{   // Get the skeleton closest to the previous position
+		for (int i = 0; i < NUI_SKELETON_COUNT; i++)
+		{
+			if (m_SkeletonTracked[i])
+			{
+				float d = abs(m_HeadPoint[i].x - pHint3D[1].x) +
+					abs(m_HeadPoint[i].y - pHint3D[1].y) +
+					abs(m_HeadPoint[i].z - pHint3D[1].z);
+				if (smallestDistance == 0 || d < smallestDistance)
+				{
+					smallestDistance = d;
+					selectedSkeleton = i;
+				}
+			}
+		}
+	}
+	if (selectedSkeleton == -1)
+	{
+		return E_FAIL;
+	}
+
+	pHint3D[0] = m_NeckPoint[selectedSkeleton];
+	pHint3D[1] = m_HeadPoint[selectedSkeleton];
+
+	return S_OK;
+}

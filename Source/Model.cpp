@@ -109,7 +109,7 @@ bool Model::loadFBX(std::string filename) {
 
 	mCurrentTime = mStart;
 
-	shocked = happy = 0;
+	shocked = happy = jawLow = upperLip = lipStr = outBrow = 0;
 	doShocked = false;
 	newResult = false;
 
@@ -278,7 +278,10 @@ void Model::update() {
 			happy = -(lAU[4] * 100) * 3 + 20;
 			if (happy > 99.9) happy = 99.9;
 			else if (happy < 0.1) happy = 0.1;
-			std::cout << happy << std::endl;
+			jawLow = -(lAU[1] * 100) * 3 + 20;
+			if (jawLow > 99.9) jawLow = 99.9;
+			else if (jawLow < 0.1) jawLow = 0.1;
+			//std::cout << happy << std::endl;
 		}
 		newResult = false;
 	} else if (stopAnim) {
@@ -304,6 +307,10 @@ void Model::update() {
 	std::vector<double> weights;
 	weights.push_back(shocked);
 	weights.push_back(happy);
+	weights.push_back(jawLow);
+	weights.push_back(lipStr);
+	weights.push_back(upperLip);
+	weights.push_back(outBrow);
 	DrawNodeRecursive(lScene->GetRootNode(), mCurrentTime, mCurrentAnimLayer, lDummyGlobalPosition, lPose, getVerticesArray(), &weights);
 	//DisplayGrid(lDummyGlobalPosition);
 

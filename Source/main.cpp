@@ -100,7 +100,7 @@ int main() {
 		}
 
 		elapsed = clock.getElapsedTime();
-		if (elapsed.asSeconds() > 1.0 / 60) { // 60 fps = 1.0/60
+		if (elapsed.asSeconds() > 1.0 / 30) { // 60 fps = 1.0/60
 			window.setActive();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			if (KinectOn) {

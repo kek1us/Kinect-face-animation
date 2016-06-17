@@ -438,9 +438,10 @@ void DrawNode(FbxNode* pNode,
 		// NURBS and patch have been converted into triangluation meshes.
 		else if (lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eMesh)
 		{
-			if (pNode->GetName() != (std::string)"upperTeeth" && pNode->GetName() != (std::string)"lowerTeeth"
+			/*if (pNode->GetName() != (std::string)"upperTeeth" && pNode->GetName() != (std::string)"lowerTeeth"
 				&& pNode->GetName() != (std::string)"leftEye" && pNode->GetName() != (std::string)"rightEye" &&
-				pNode->GetName() != (std::string)"gums") {
+				pNode->GetName() != (std::string)"gums") {*/
+			if (pNode->GetName() == (std::string)"head") {
 				DrawMesh(pNode, pTime, pAnimLayer, pGlobalPosition, pPose, vertices, weights);
 			}
 		}
@@ -1096,6 +1097,10 @@ double evaluateChannel(std::vector<double>* weights, FbxString name) {
 	}
 	else if (name == "mouthEyes_Blend.smile") {
 		weight = weights->at(1);
+		//std::cout << name << ": " << weight << std::endl;
+	}
+	else if (name == "mouthEyes_Blend.F") {
+		//weight = weights->at(2);
 		//std::cout << name << ": " << weight << std::endl;
 	}
 

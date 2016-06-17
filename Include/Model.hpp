@@ -71,6 +71,10 @@ private:
 	// PLACEHOLDER
 	double shocked;
 	double happy;
+	double jawLow;
+	double upperLip;
+	double lipStr;
+	double outBrow;
 	bool doShocked;
 	bool newResult;
 	bool stopAnim;
