@@ -26,6 +26,7 @@ public:
 	void undoShocked() { doShocked = false; };
 	void setDefaultPose();
 	void modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S);
+	void modifyJaw(double value);
 	void registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation, FLOAT* AU, UINT* numAU, FLOAT* SU, UINT* numSU);
 	void stopAnimation() { stopAnim = true; };
 
@@ -80,6 +81,7 @@ private:
 	bool stopAnim;
 	FbxMatrix matrixHeadO;
 	FbxMatrix matrixHead;
+	FbxMatrix matrixJawEnd;
 
 	// RESULTSHOLDER
 	FLOAT lScale;

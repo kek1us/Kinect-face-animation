@@ -62,7 +62,6 @@ bool Model::loadFBX(std::string filename) {
 	FbxNode* lNode = lScene->GetRootNode();
 	this->getFBXData(lNode);
 
-	////////////////////////// HURR DURR
 	// Convert mesh, NURBS and patch into triangle mesh
 	FbxGeometryConverter lGeomConverter(lSdkManager);
 	lGeomConverter.Triangulate(lScene, /*replace*/true);
@@ -70,9 +69,10 @@ bool Model::loadFBX(std::string filename) {
 	FbxArray<FbxString*> mAnimStackNameArray;
 	lScene->FillAnimStackNameArray(mAnimStackNameArray);
 
+	// Prepare the Point Cache data
 	mCache_Start = FBXSDK_TIME_INFINITE;
 	mCache_Stop = FBXSDK_TIME_MINUS_INFINITE;
-	//PreparePointCacheData(lScene, mCache_Start, mCache_Stop);
+	PreparePointCacheData(lScene, mCache_Start, mCache_Stop);
 
 	// Initialize the frame period.
 	mFrameTime.SetTime(0, 0, 0, 1, 0, lScene->GetGlobalSettings().GetTimeMode());
@@ -110,7 +110,6 @@ bool Model::loadFBX(std::string filename) {
 	mCurrentTime = mStart;
 
 	shocked = happy = jawLow = upperLip = lipStr = outBrow = 0;
-	doShocked = false;
 	newResult = false;
 
 	// Get the pose to work with
@@ -118,13 +117,11 @@ bool Model::loadFBX(std::string filename) {
 
 	setDefaultPose();
 
-	/////////////////////////
-
 	// Display hierarchy
-	FBXSDK_printf("\n\n---------\nHierarchy\n---------\n\n");
-	DisplayHierarchy(lNode, 0);
-
-	if (lResult) FBXSDK_printf("THERE WE GO, BOIS!\n");
+	if (DEBUG_MODE) {
+		FBXSDK_printf("\n\n---------\nHierarchy\n---------\n\n");
+		DisplayHierarchy(lNode, 0);
+	}
 
 	return lResult;
 }
@@ -136,10 +133,7 @@ void Model::getFBXData(FbxNode* node) {
 		FbxNode* childNode = node->GetChild(i);
 		FbxMesh* mesh = childNode->GetMesh();
 
-		if (mesh != NULL && childNode->GetName() != (std::string)"upperTeeth" && childNode->GetName() != (std::string)"lowerTeeth" 
-			&& childNode->GetName() != (std::string)"leftEye" && childNode->GetName() != (std::string)"rightEye" && 
-			childNode->GetName() != (std::string)"gums") {
-			std::cout << "WTF: " << childNode->GetName() << std::endl;
+		if (mesh != NULL && childNode->GetName() == (std::string)"head") {
 			// Get control points (=vertices for a mesh)
 			FbxVector4* fbxControlPoints = mesh->GetControlPoints();
 
@@ -186,7 +180,7 @@ void Model::getFBXData(FbxNode* node) {
 void Model::setDefaultPose() {
 	// Index of the head matrices are 0 and 3, because of how the model is built
 	FbxNode * node;
-	FbxMatrix matrixJaw, matrixJawEnd, matrixHeadTop;
+	FbxMatrix matrixJaw;
 	lPose->SetIsBindPose(false);
 	int index = 0;
 	matrixHeadO = lPose->GetMatrix(index);
@@ -197,7 +191,6 @@ void Model::setDefaultPose() {
 	// and rebuild the model with local matrices
 	matrixJaw = lPose->GetMatrix(lPose->Find("jaw"));
 	matrixJawEnd = lPose->GetMatrix(lPose->Find("jawEnd"));
-	matrixHeadTop = lPose->GetMatrix(lPose->Find("headTop"));
 	
 	matrixJawEnd = matrixJaw.Inverse() * matrixJawEnd;
 	index = lPose->Find("jawEnd");
@@ -211,12 +204,6 @@ void Model::setDefaultPose() {
 	lPose->Remove(index);
 	lPose->Add(node, matrixJaw, true);
 
-	matrixHeadTop = matrixHead.Inverse() * matrixHeadTop;
-	index = lPose->Find("headTop");
-	node = lPose->GetNode(index);
-	lPose->Remove(index);
-	lPose->Add(node, matrixHeadTop, true);
-
 	lRotation[0] = lRotation[1] = lRotation[2] = 0.0f;
 }
 
@@ -228,7 +215,7 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	int index;
 	bool isLocalMatrix = false;
 
-	// Translate the head
+	// Translate the head and rotate the head
 	index = lPose->Find("head");
 	node = lPose->GetNode(index);
 	lPose->Remove(index);
@@ -244,6 +231,28 @@ void Model::modifyHead(FbxVector4 T, FbxVector4 R, FbxVector4 S) {
 	lPose->Remove(index);
 	lPose->Add(node, matrix, isLocalMatrix);
 }
+
+void Model::modifyJaw(double value) {
+	if (value < 0) value = 0;
+	else value = (value / 100) * 1.5;
+	FbxNode * node;
+	FbxMatrix matrix;
+	FbxVector4 pTranslation, pRotation, pShearing, pScaling;
+	double pSign;
+	int index;
+	bool isLocalMatrix = false;
+
+	index = lPose->Find("jawEnd");
+	node = lPose->GetNode(index);
+	matrix = lPose->GetMatrix(index);
+	isLocalMatrix = lPose->IsLocalMatrix(index);
+
+	matrixJawEnd.GetElements(pTranslation, pRotation, pShearing, pScaling, pSign);
+	matrix.SetTRS(pTranslation - FbxVector4(0, value, 0, 1), pRotation, pScaling);
+	lPose->Remove(index);
+	lPose->Add(node, matrix, isLocalMatrix);
+}
+
 
 void Model::registerResult(FLOAT* scale, FLOAT* rotation, FLOAT* translation, FLOAT* AU, UINT* numAU, FLOAT* SU, UINT* numSU) {
 	lScale = *scale;
@@ -269,20 +278,16 @@ void Model::update() {
 	FbxAMatrix lDummyGlobalPosition;
 
 	if (newResult) {
-		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4((double)-lRotation[1], (double)lRotation[0], (double)lRotation[2], 1), FbxVector4(1, 1, 1, 0));
-
 		if (lAU != NULL) {
 			shocked = -(lAU[3] * 100) * 4 + 100;
-			if (shocked > 99.9) shocked = 99.9;
-			else if (shocked < 0.1) shocked = 0.1;
 			happy = -(lAU[4] * 100) * 3 + 20;
-			if (happy > 99.9) happy = 99.9;
-			else if (happy < 0.1) happy = 0.1;
-			jawLow = -(lAU[1] * 100) * 3 + 20;
-			if (jawLow > 99.9) jawLow = 99.9;
-			else if (jawLow < 0.1) jawLow = 0.1;
-			//std::cout << happy << std::endl;
+			jawLow = (lAU[1] * 100) * 3 + 50;
+			upperLip = (lAU[0] * 100) * 3 - 50;
+			lipStr = -(lAU[0] * 100) * 3 + 20;
 		}
+		modifyJaw(jawLow);
+		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4((double)-lRotation[1], (double)lRotation[0], (double)lRotation[2], 1), FbxVector4(1, 1, 1, 0));
+
 		newResult = false;
 	} else if (stopAnim) {
 		modifyHead(FbxVector4(0, 0, 0, 0), FbxVector4(0, 0, 0, 1), FbxVector4(1, 1, 1, 0));
@@ -290,20 +295,10 @@ void Model::update() {
 		stopAnim = false;
 	}
 
-	//if (doShocked && shocked < 99.9) shocked += 0.5;
-	//else if (!doShocked && shocked > 0.1) shocked -= 0.5;
-
 	// Reset the vertices array
 	vertices.clear();
 
-	// HERERERERERERERERERE
-	//mCurrentTime += mFrameTime;
-
-	//if (mCurrentTime > mStop)
-	//{
-	//	mCurrentTime = mStart;
-	//}
-
+	// Set our own weights
 	std::vector<double> weights;
 	weights.push_back(shocked);
 	weights.push_back(happy);
@@ -311,8 +306,9 @@ void Model::update() {
 	weights.push_back(lipStr);
 	weights.push_back(upperLip);
 	weights.push_back(outBrow);
+
+	// Obtain the new deformed model
 	DrawNodeRecursive(lScene->GetRootNode(), mCurrentTime, mCurrentAnimLayer, lDummyGlobalPosition, lPose, getVerticesArray(), &weights);
-	//DisplayGrid(lDummyGlobalPosition);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_triangles);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);

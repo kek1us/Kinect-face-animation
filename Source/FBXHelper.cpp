@@ -429,11 +429,11 @@ void DrawNode(FbxNode* pNode,
 		// All lights has been processed before the whole scene because they influence every geometry.
 		if (lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eMarker)
 		{
-			DrawMarker(pGlobalPosition);
+			// We don't draw markers.
 		}
 		else if (lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eSkeleton)
 		{
-			DrawSkeleton(pNode, pParentGlobalPosition, pGlobalPosition);
+			// We don't draw skeletons.
 		}
 		// NURBS and patch have been converted into triangluation meshes.
 		else if (lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eMesh)
@@ -451,36 +451,13 @@ void DrawNode(FbxNode* pNode,
 		}
 		else if (lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eNull)
 		{
-			DrawNull(pGlobalPosition);
+			// We don't draw nulls.
 		}
 	}
 	else
 	{
-		// Draw a Null for nodes without attribute.
-		DrawNull(pGlobalPosition);
+		// Do nothing
 	}
-}
-
-void DrawMarker(FbxAMatrix& pGlobalPosition)
-{
-	// Markers
-	//GlDrawMarker(pGlobalPosition);
-}
-
-void DrawSkeleton(FbxNode* pNode, FbxAMatrix& pParentGlobalPosition, FbxAMatrix& pGlobalPosition)
-{
-	// Skeleton
-	//FbxSkeleton* lSkeleton = (FbxSkeleton*)pNode->GetNodeAttribute();
-
-	//// Only draw the skeleton if it's a limb node and if 
-	//// the parent also has an attribute of type skeleton.
-	//if (lSkeleton->GetSkeletonType() == FbxSkeleton::eLimbNode &&
-	//	pNode->GetParent() &&
-	//	pNode->GetParent()->GetNodeAttribute() &&
-	//	pNode->GetParent()->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eSkeleton)
-	//{
-	//	GlDrawLimbNode(pParentGlobalPosition, pGlobalPosition);
-	//}
 }
 
 void DrawMesh(FbxNode* pNode, FbxTime& pTime, FbxAnimLayer* pAnimLayer, FbxAMatrix& pGlobalPosition, FbxPose* pPose, std::vector<glm::vec3>* vertices, std::vector<double>* weights)
@@ -519,7 +496,6 @@ void DrawMesh(FbxNode* pNode, FbxTime& pTime, FbxAnimLayer* pAnimLayer, FbxAMatr
 			if (lHasShape)
 			{
 				// Deform the vertex array with the shapes.
-				//std::cout << "  -> SHAPE" << std::endl;
 				ComputeShapeDeformation(lMesh, pTime, pAnimLayer, lVertexArray, weights);
 			}
 
@@ -532,7 +508,6 @@ void DrawMesh(FbxNode* pNode, FbxTime& pTime, FbxAnimLayer* pAnimLayer, FbxAMatr
 			}
 			if (lClusterCount)
 			{
-				//std::cout << "  -> SKIN" << std::endl;
 				// Deform the vertex array with the skin deformer.
 				ComputeSkinDeformation(pGlobalPosition, lMesh, pTime, lVertexArray, pPose);
 			}
@@ -557,13 +532,6 @@ void DrawMesh(FbxNode* pNode, FbxTime& pTime, FbxAnimLayer* pAnimLayer, FbxAMatr
 
 
 	delete[] lVertexArray;
-}
-
-
-void DrawNull(FbxAMatrix& pGlobalPosition)
-{
-	// Crosshair
-	//GlDrawCrossHair(pGlobalPosition);
 }
 
 void ComputeShapeDeformation(FbxMesh* pMesh, FbxTime& pTime, FbxAnimLayer* pAnimLayer, FbxVector4* pVertexArray, std::vector<double>* weights)
@@ -1093,16 +1061,20 @@ double evaluateChannel(std::vector<double>* weights, FbxString name) {
 
 	if (name == "mouthEyes_Blend.rightBrowRaise" || name == "mouthEyes_Blend.leftBrowRaise") {
 		weight = weights->at(0);
-		//std::cout << name << ": " << weight << std::endl;
 	}
 	else if (name == "mouthEyes_Blend.smile") {
 		weight = weights->at(1);
-		//std::cout << name << ": " << weight << std::endl;
 	}
 	else if (name == "mouthEyes_Blend.F") {
-		//weight = weights->at(2);
-		//std::cout << name << ": " << weight << std::endl;
+		weight = weights->at(4);
+		if (weight > 20) weight = 20;
+	} 
+	else if (name == "mouthEyes_Blend.rightMouthRoll") {
+		weight = 0;
 	}
+
+	if (weight > 99.9) weight = 99.9;
+	else if (weight < 0.1) weight = 0.1;
 
 	return weight;
 	//return weights->at(0);
