@@ -2,6 +2,9 @@
 
 Kinect::Kinect() {
 	m_bNuiInitialized = false;
+	scale = 0.0f;
+	pSU = NULL;
+	pAU = NULL;
 }
 
 Kinect::~Kinect() {
@@ -13,11 +16,13 @@ Kinect::~Kinect() {
 		pFTResult->Release();
 		pColorFrame->Release();
 		pDepthFrame->Release();
+		m_VideoBuffer->Release();
+		m_DepthBuffer->Release();
 		pFT->Release();
 
 		if (m_bNuiInitialized)
 		{
-			NuiShutdown();
+			sensor->NuiShutdown();
 		}
 		m_bNuiInitialized = false;
 	}
@@ -52,53 +57,39 @@ bool Kinect::initKinect() {
 
 	// Initialize sensor
 	HRESULT hr = sensor->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR);
-	if (FAILED(hr))
-	{
-		return false;
-	}
+	if (FAILED(hr)) return false;
 
 	m_bNuiInitialized = true;
 
+	// Open the image streams
 	sensor->NuiImageStreamOpen(
-		NUI_IMAGE_TYPE_COLOR,            // Depth camera or rgb camera?
-		NUI_IMAGE_RESOLUTION_640x480,    // Image resolution
-		0,      // Image stream flags, e.g. near mode
-		2,      // Number of frames to buffer
-		NULL,   // Event handle
+		NUI_IMAGE_TYPE_COLOR,			// RGB camera?
+		NUI_IMAGE_RESOLUTION_640x480,	// Image resolution
+		0,								// Image stream flags, e.g. near mode
+		2,								// Number of frames to buffer
+		NULL,							// Event handle
 		&rgbStream);
 
 	sensor->NuiImageStreamOpen(
-		NUI_IMAGE_TYPE_DEPTH,            // Depth camera or rgb camera?
-		NUI_IMAGE_RESOLUTION_320x240,    // Image resolution
-		0,      // Image stream flags, e.g. near mode
-		2,      // Number of frames to buffer
-		NULL,   // Event handle
+		NUI_IMAGE_TYPE_DEPTH,			// Depth camera
+		NUI_IMAGE_RESOLUTION_320x240,	// Image resolution
+		0,								// Image stream flags, e.g. near mode
+		2,								// Number of frames to buffer
+		NULL,							// Event handle
 		&depthStream);
 
-	// KEK
+	// Create the IFTImage interfaces that will hold the image stream's buffers
 	m_VideoBuffer = FTCreateImage();
-	if (!m_VideoBuffer)
-	{
-		return false;
-	}
+	if (!m_VideoBuffer) return false;
 
 	hr = m_VideoBuffer->Allocate(640, 480, FTIMAGEFORMAT_UINT8_B8G8R8X8);
-	if (FAILED(hr))
-	{
-		return false;
-	}
+	if (FAILED(hr)) return false;
 
 	m_DepthBuffer = FTCreateImage();
-	if (!m_DepthBuffer)
-	{
-		return false;
-	}
+	if (!m_DepthBuffer)	return false;
 
 	hr = m_DepthBuffer->Allocate(320, 240, FTIMAGEFORMAT_UINT16_D13P3);
-	if (FAILED(hr))
-	{
-		return false;
-	}
+	if (FAILED(hr)) return false;
 
 	return true;
 }
@@ -108,14 +99,12 @@ bool Kinect::initFaceTrack() {
 	pFT = FTCreateFaceTracker();
 	if (!pFT) return false;
 	// Video camera config with width, height, focal length in pixels
-	// NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS focal length is computed for 640x480 resolution
-	// If you use different resolutions, multiply this focal length by the scaling factor
-	FT_CAMERA_CONFIG videoCameraConfig = { 640, 480, NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS };
+	FT_CAMERA_CONFIG videoCameraConfig;
+	GetVideoConfiguration(&videoCameraConfig);
 
 	// Depth camera config with width, height, focal length in pixels
-	// NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS focal length is computed for 320x240 resolution
-	// If you use different resolutions, multiply this focal length by the scaling factor
-	FT_CAMERA_CONFIG depthCameraConfig = { 320, 240, NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS };
+	FT_CAMERA_CONFIG depthCameraConfig;
+	GetDepthConfiguration(&depthCameraConfig);
 
 	// Initialize the face tracker
 	HRESULT hr = pFT->Initialize(&videoCameraConfig, &depthCameraConfig, NULL, NULL);
@@ -135,8 +124,8 @@ bool Kinect::initFaceTrack() {
 
 	sensorData.pVideoFrame = pColorFrame;
 	sensorData.pDepthFrame = pDepthFrame;
-	sensorData.ZoomFactor = 1.0f;       // Not used must be 1.0
-	sensorData.ViewOffset = POINT{0, 0}; // Not used must be (0,0)
+	sensorData.ZoomFactor = 1.0f;       // Not used, must be 1.0
+	sensorData.ViewOffset = POINT{0, 0}; // Not used, must be (0,0)
 
 	isTracked = false;
 	SetCenterOfImage(NULL);
@@ -151,14 +140,7 @@ bool Kinect::initFaceTrack() {
 
 	DWORD dwSkeletonFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
 	hr = sensor->NuiSkeletonTrackingEnable(NULL, dwSkeletonFlags);
-	if (FAILED(hr))
-	{
-		return hr;
-	}
-
-	scale = 0.0f;
-	pSU = NULL;
-	pAU = NULL;
+	if (FAILED(hr)) return false;
 
 	return true;
 }
@@ -264,16 +246,12 @@ void Kinect::update() {
 			}
 		}
 	}
-	else {
-		std::cout << "Kinect disconnected" << std::endl;
-	}
 
 	isTracked = SUCCEEDED(hrFT) && SUCCEEDED(pFTResult->GetStatus());
 	SetCenterOfImage(pFTResult);
 
 	// Do something with pFTResult.
 	if (isTracked) {
-		//std::cout << "DETECTS FACE" << std::endl;
 		BOOL suConverged;
 		pFT->GetShapeUnits(NULL, &pSU, &numSU, &suConverged);
 		POINT viewOffset = { 0, 0 };
@@ -293,14 +271,8 @@ void Kinect::update() {
 
 			hr = VisualizeFaceModel(pColorFrame, ftModel, &cameraConfig, pSU, 1.0, viewOffset, pFTResult, 0x00FFFF00);
 
-			if (isRecording) {
-				// Print the data of the Face Model to the file
-				// TODO
-			}
-
 			ftModel->Release();
-		}
-		else {
+		} else {
 			std::cout << "Could not get the Face Model" << std::endl;
 		}
 
@@ -308,15 +280,6 @@ void Kinect::update() {
 			std::cout << "Could not draw the Face Model" << std::endl;
 		}
 	}
-	//else {
-	//	for (int i = 0; i < NUI_SKELETON_COUNT; ++i)
-	//	{
-	//		m_HeadPoint[i] = m_NeckPoint[i] = FT_VECTOR3D(0, 0, 0);
-	//		m_SkeletonTracked[i] = false;
-	//	}
-	//}
-
-	// Terminate on some criteria.
 }
 
 void Kinect::render() {
